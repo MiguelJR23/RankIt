@@ -1,92 +1,74 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RankIt</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>RankIt</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    
+    <body>
+    <header class="toolbar">
+        <input id="titleInput" value="Meu Ranking">
+        <div class="stats">
+        <span id="totalItems">0 itens</span>
+        <span id="reviewCount">0 revisão</span>
+        <span id="unrankedCount">0 não ranqueados</span> // Player
+        </div>
 
-<header class="toolbar">
+        <div class="controls">
+        <input id="search" placeholder="Pesquisar">
 
-<input id="titleInput" value="Meu Ranking">
+        <select id="filter">
+            <option value="all">Todos</option>
+            <option value="ranked">Ranqueados</option>
+            <option value="unranked">Não Ranqueados</option>
+            <option value="review">A Revisar</option>
+        </select>
 
-<div class="stats">
-<span id="totalItems">0 itens</span>
-<span id="reviewCount">0 revisão</span>
-<span id="unrankedCount">0 não ranqueados</span>
-</div>
+        <select id="columns">
+            <option value="1">1 coluna</option>
+            <option value="2" selected>2 colunas</option>
+            <option value="3">3 colunas</option>
+        </select>
 
-<div class="controls">
+        <button id="newBtn">Novo</button>
+        </div>
+    </header>
+    
+    <main>
+     <section>
+        <h2>Ranking</h2>
+        <div id="ranking" class="grid cols-2"></div>
+     </section>
 
-<input id="search" placeholder="Pesquisar">
+     <section>
+        <h2>Não Ranqueados</h2>
+        <div id="unranked" class="grid cols-2"></div>
+     </section>
 
-<select id="filter">
-<option value="all">Todos</option>
-<option value="ranked">Ranqueados</option>
-<option value="unranked">Não Ranqueados</option>
-<option value="review">A Revisar</option>
-</select>
+    </main>
+    
+    <div id="modal" class="modal hidden">
+        <div class="modal-box">
+                <h2 id="modalTitle">Novo Item</h2>
+                <input id="nameInput" placeholder="Nome">
+                <input id="imageInput" placeholder="URL da imagem">
+                <textarea id="noteInput" placeholder="Nota"></textarea>
+                <input id="rankInput" type="number" min="1" placeholder="Rank">
+                
+                <label>
+                    <input id="reviewInput" type="checkbox">
+                    A revisar
+                </label>
 
-<select id="columns">
-<option value="1">1 coluna</option>
-<option value="2" selected>2 colunas</option>
-<option value="3">3 colunas</option>
-</select>
-
-<button id="newBtn">Novo</button>
-
-</div>
-
-</header>
-
-<main>
-
-<section>
-<h2>Ranking</h2>
-<div id="ranking" class="grid cols-2"></div>
-</section>
-
-<section>
-<h2>Não Ranqueados</h2>
-<div id="unranked" class="grid cols-2"></div>
-</section>
-
-</main>
-
-<div id="modal" class="modal hidden">
-
-<div class="modal-box">
-
-<h2 id="modalTitle">Novo Item</h2>
-
-<input id="nameInput" placeholder="Nome">
-
-<input id="imageInput" placeholder="URL da imagem">
-
-<textarea id="noteInput" placeholder="Nota"></textarea>
-
-<input id="rankInput" type="number" min="1" placeholder="Rank">
-
-<label>
-<input id="reviewInput" type="checkbox">
-A revisar
-</label>
-
-<div class="modal-actions">
-
-<button id="cancelBtn">Cancelar</button>
-
-<button id="saveBtn">Salvar</button>
-
-</div>
-
-</div>
-
-</div>
-
-<script src="script.js"></script>
-
-</body>
+            <div class="modal-actions">
+                <button id="cancelBtn">Cancelar</button>
+                <button id="saveBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    </body>
 </html>
