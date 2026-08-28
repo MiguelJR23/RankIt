@@ -6,69 +6,63 @@
         <title>RankIt</title>
         <link rel="stylesheet" href="style.css">
     </head>
-    
+
     <body>
     <header class="toolbar">
-        <input id="titleInput" value="Meu Ranking">
+        <input id="titleInput" value="Meu Ranking" aria-label="Título do ranking">
         <div class="stats">
         <span id="totalItems">0 itens</span>
         <span id="reviewCount">0 revisão</span>
-        <span id="unrankedCount">0 não ranqueados</span> // Player
+        <span id="unrankedCount">0 não ranqueados</span>
         </div>
-
         <div class="controls">
-        <input id="search" placeholder="Pesquisar">
-
-        <select id="filter">
+        <input id="search" placeholder="Pesquisar" aria-label="Pesquisar itens">
+        <select id="filter" aria-label="Filtrar itens">
             <option value="all">Todos</option>
             <option value="ranked">Ranqueados</option>
             <option value="unranked">Não Ranqueados</option>
             <option value="review">A Revisar</option>
         </select>
-
-        <select id="columns">
+        <select id="columns" aria-label="Número de colunas">
             <option value="1">1 coluna</option>
             <option value="2" selected>2 colunas</option>
             <option value="3">3 colunas</option>
         </select>
-
-        <button id="newBtn">Novo</button>
+        <button id="newBtn" type="button">Novo</button>
         </div>
     </header>
-    
+
     <main>
      <section>
         <h2>Ranking</h2>
         <div id="ranking" class="grid cols-2"></div>
      </section>
-
      <section>
         <h2>Não Ranqueados</h2>
         <div id="unranked" class="grid cols-2"></div>
      </section>
-
     </main>
-    
-    <div id="modal" class="modal hidden">
+
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
         <div class="modal-box">
                 <h2 id="modalTitle">Novo Item</h2>
-                <input id="nameInput" placeholder="Nome">
-                <input id="imageInput" placeholder="URL da imagem">
-                <textarea id="noteInput" placeholder="Nota"></textarea>
-                <input id="rankInput" type="number" min="1" placeholder="Rank">
-                
+                <p id="formError" class="form-error" hidden></p>
+                <input id="nameInput" placeholder="Nome" aria-label="Nome do item">
+                <input id="imageInput" placeholder="URL da imagem" aria-label="URL da imagem">
+                <textarea id="noteInput" placeholder="Nota" aria-label="Nota"></textarea>
+                <input id="rankInput" type="number" min="1" placeholder="Rank" aria-label="Posição no ranking">
+
                 <label>
                     <input id="reviewInput" type="checkbox">
                     A revisar
                 </label>
-
             <div class="modal-actions">
-                <button id="cancelBtn">Cancelar</button>
-                <button id="saveBtn">Salvar</button>
+                <button id="cancelBtn" type="button">Cancelar</button>
+                <button id="saveBtn" type="button">Salvar</button>
             </div>
         </div>
     </div>
-    
+
     <script src="script.js"></script>
     </body>
 </html>
