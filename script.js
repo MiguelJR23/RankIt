@@ -53,6 +53,9 @@ const columnsSelect = document.getElementById('columns');
 const newBtn = document.getElementById('newBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const importJsonInput = document.getElementById('importJsonInput');
 
 const nameInput = document.getElementById('nameInput');
 const imageInput = document.getElementById('imageInput');
@@ -117,6 +120,109 @@ function loadDb() {
 function save() {
   db.title = titleInput.value;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+/* ---------------------------------------------------------
+   Backup em JSON (exportar / importar arquivo)
+
+   Complementa o localStorage: gera um arquivo .json com título,
+   colunas e as duas listas, para o usuário guardar fora do
+   navegador ou levar para outro dispositivo. Ao importar, os
+   ids dos itens são sempre regenerados (nunca confiamos em ids
+   vindos de um arquivo externo) e o arquivo é validado antes de
+   qualquer coisa ser sobrescrita.
+   --------------------------------------------------------- */
+
+function exportJson() {
+  save();
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    title: db.title,
+    columns: db.columns,
+    ranked: db.ranked,
+    unranked: db.unranked,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName =
+    (db.title || 'ranking')
+      .trim()
+      .replace(/[^\p{L}\p{N}\-_ ]/gu, '')
+      .replace(/\s+/g, '-') || 'ranking';
+  a.download = safeName + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function validateImportedItem(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+  if (!name) return null;
+  return {
+    id: generateId(),
+    name,
+    image: typeof raw.image === 'string' ? raw.image.trim() : '',
+    note: typeof raw.note === 'string' ? raw.note.trim() : '',
+    review: !!raw.review,
+  };
+}
+
+// Recebe o JSON já parseado (objeto) e o db atual como fallback para
+// título/colunas ausentes; nunca lança exceção, sempre devolve
+// { success, error } ou { success, db }.
+function buildDbFromImport(parsed, fallback) {
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.ranked) || !Array.isArray(parsed.unranked)) {
+    return { success: false, error: 'Esse arquivo não tem o formato esperado (faltam as listas "ranked"/"unranked").' };
+  }
+  const ranked = parsed.ranked.map(validateImportedItem).filter(Boolean);
+  const unranked = parsed.unranked.map(validateImportedItem).filter(Boolean);
+  if (ranked.length === 0 && unranked.length === 0) {
+    return { success: false, error: 'Nenhum item válido foi encontrado no arquivo.' };
+  }
+  const title = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : fallback.title;
+  const columns = [1, 2, 3].includes(Number(parsed.columns)) ? Number(parsed.columns) : fallback.columns;
+  return { success: true, db: { title, columns, ranked, unranked } };
+}
+
+function handleJsonFileSelected(e) {
+  const file = e.target.files[0];
+  importJsonInput.value = ''; // permite selecionar o mesmo arquivo de novo depois
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onerror = () => alert('Não foi possível ler o arquivo.');
+  reader.onload = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(String(reader.result));
+    } catch (err) {
+      alert('Esse arquivo não é um JSON válido.');
+      return;
+    }
+
+    const result = buildDbFromImport(parsed, { title: db.title, columns: db.columns });
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
+
+    if (!confirm('Importar este arquivo vai substituir a lista atual ("' + db.title + '"). Continuar?')) {
+      return;
+    }
+
+    db = result.db;
+    titleInput.value = db.title;
+    columnsSelect.value = String(db.columns);
+    ranking.className = 'grid cols-' + db.columns;
+    unranked.className = 'grid cols-' + db.columns;
+    render();
+  };
+  reader.readAsText(file);
 }
 
 /* ---------------------------------------------------------
@@ -462,6 +568,10 @@ columnsSelect.addEventListener('change', (e) => {
 newBtn.addEventListener('click', () => openModal());
 cancelBtn.addEventListener('click', closeModalFn);
 saveBtn.addEventListener('click', saveItem);
+
+exportJsonBtn.addEventListener('click', exportJson);
+importJsonBtn.addEventListener('click', () => importJsonInput.click());
+importJsonInput.addEventListener('change', handleJsonFileSelected);
 
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModalFn();
