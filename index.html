@@ -75,38 +75,3 @@
     <script src="script.js"></script>
     </body>
 </html>
-
-    <main>
-     <section>
-        <h2>Ranking</h2>
-        <div id="ranking" class="grid cols-2"></div>
-     </section>
-     <section>
-        <h2>Não Ranqueados</h2>
-        <div id="unranked" class="grid cols-2"></div>
-     </section>
-    </main>
-
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-box">
-                <h2 id="modalTitle">Novo Item</h2>
-                <p id="formError" class="form-error" hidden></p>
-                <input id="nameInput" placeholder="Nome" aria-label="Nome do item">
-                <input id="imageInput" placeholder="URL da imagem" aria-label="URL da imagem">
-                <textarea id="noteInput" placeholder="Nota" aria-label="Nota"></textarea>
-                <input id="rankInput" type="number" min="1" placeholder="Rank" aria-label="Posição no ranking">
-
-                <label>
-                    <input id="reviewInput" type="checkbox">
-                    A revisar
-                </label>
-            <div class="modal-actions">
-                <button id="cancelBtn" type="button">Cancelar</button>
-                <button id="saveBtn" type="button">Salvar</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-    </body>
-</html>
