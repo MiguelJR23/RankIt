@@ -496,6 +496,102 @@ function createCard(item, isRanked, rankNumber, canReorder) {
   return card;
 }
 
+function insertAt(array, item, position) {
+  const copy = array.slice();
+  copy.splice(position - 1, 0, item);
+  return copy;
+}
+
+/* ---------------------------------------------------------
+   Estatísticas
+   --------------------------------------------------------- */
+
+function updateStats() {
+  totalItemsEl.textContent = db.ranked.length + db.unranked.length + ' itens';
+  const reviewCount =
+    db.ranked.filter((i) => i.review).length + db.unranked.filter((i) => i.review).length;
+  reviewCountEl.textContent = reviewCount + ' revisão';
+  unrankedCountEl.textContent = db.unranked.length + ' não ranqueados';
+}
+
+/* ---------------------------------------------------------
+   Renderização
+   --------------------------------------------------------- */
+
+function createCard(item, isRanked, rankNumber, canReorder) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = item.id;
+
+  const isDraggable = isRanked && canReorder;
+  card.draggable = isDraggable;
+  if (isRanked && !canReorder) {
+    card.title = 'Limpe a busca e o filtro "A Revisar" para reordenar arrastando';
+  }
+
+  const img = document.createElement('img');
+  const url = safeImageUrl(item.image);
+  img.src = url || placeholder(item.name);
+  img.alt = item.name;
+  img.loading = 'lazy';
+  img.addEventListener('error', () => {
+    img.src = placeholder(item.name);
+  });
+  card.appendChild(img);
+
+  const info = document.createElement('div');
+  info.className = 'info';
+
+  const rankLine = document.createElement('div');
+  rankLine.className = 'rank';
+  rankLine.textContent = (isRanked ? rankNumber + '. ' : '— ') + item.name;
+  info.appendChild(rankLine);
+
+  if (item.review) {
+    const review = document.createElement('div');
+    review.className = 'review';
+    review.textContent = '★ A revisar';
+    info.appendChild(review);
+  }
+
+  if (item.note) {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = item.note;
+    info.appendChild(note);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏';
+  editBtn.setAttribute('aria-label', 'Editar ' + item.name);
+  editBtn.addEventListener('click', () => editItem(item.id));
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.textContent = '🗑';
+  delBtn.setAttribute('aria-label', 'Excluir ' + item.name);
+  delBtn.addEventListener('click', () => deleteItem(item.id));
+
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
+  info.appendChild(actions);
+  card.appendChild(info);
+
+  if (isDraggable) {
+    card.addEventListener('dragstart', () => card.classList.add('dragging'));
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      rebuildRanksFromDOM();
+    });
+  }
+
+  return card;
+}
+
 function render() {
   save();
   updateStats();
