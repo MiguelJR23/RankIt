@@ -36,10 +36,8 @@ const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
 const exportListTxtBtn = document.getElementById('exportListTxtBtn');
 const importListTxtBtn = document.getElementById('importListTxtBtn');
-const importListTxtInput = document.getElementById('importListTxtInput');
 const exportImagesTxtBtn = document.getElementById('exportImagesTxtBtn');
 const importImagesTxtBtn = document.getElementById('importImagesTxtBtn');
-const importImagesTxtInput = document.getElementById('importImagesTxtInput');
 
 const nameInput = document.getElementById('nameInput');
 const imageInput = document.getElementById('imageInput');
@@ -104,37 +102,45 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 }
 
-/* Backup em arquivo (.txt) */
+/* Área de transferência (clipboard) */
 
-function safeFileBaseName() {
-  return (
-    (db.title || 'ranking')
-      .trim()
-      .replace(/[^\p{L}\p{N}\-_ ]/gu, '')
-      .replace(/\s+/g, '-') || 'ranking'
-  );
+async function writeClipboardText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      // sem permissão/contexto inseguro — cai no fallback abaixo
+    }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (err) {
+    return false;
+  }
 }
 
-function downloadFile(filename, content, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+async function readClipboardText() {
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    try {
+      return await navigator.clipboard.readText();
+    } catch (err) {
+      // sem permissão/contexto inseguro — pede pra colar na mão abaixo
+    }
+  }
+  return window.prompt('Cole aqui o texto copiado:');
 }
 
-function readFileAsText(file, onText) {
-  const reader = new FileReader();
-  reader.onerror = () => alert('Não foi possível ler o arquivo.');
-  reader.onload = () => onText(String(reader.result));
-  reader.readAsText(file);
-}
-
-/* Lista (.txt) */
+/* Lista (texto) */
 
 function formatTxtItemLine(rank, item, type) {
   let s = type === 'ranked' ? rank + '. ' + item.name : '- ' + item.name;
@@ -209,42 +215,40 @@ function parseListText(text) {
   return { title, ranked: rankedRaw.map(({ rank, ...rest }) => rest), unranked };
 }
 
-function exportListTxt() {
+async function exportListTxt() {
   save();
-  downloadFile(safeFileBaseName() + '-lista.txt', generateListText(db), 'text/plain;charset=utf-8');
+  const ok = await writeClipboardText(generateListText(db));
+  alert(ok ? 'Lista copiada! Cole onde quiser guardar.' : 'Não foi possível copiar. Tente novamente.');
 }
 
-function handleListTxtFileSelected(e) {
-  const file = e.target.files[0];
-  importListTxtInput.value = '';
-  if (!file) return;
+async function importListFromClipboard() {
+  const text = await readClipboardText();
+  if (text === null) return; // usuário cancelou
 
-  readFileAsText(file, (text) => {
-    if (!text.trim()) {
-      alert('O arquivo está vazio.');
-      return;
-    }
-    const parsed = parseListText(text);
-    if (parsed.ranked.length === 0 && parsed.unranked.length === 0) {
-      alert('Não foi possível reconhecer nenhum item nesse arquivo. Confira o formato (ex: "1. Nome").');
-      return;
-    }
-    const msg =
-      'Importar esta lista vai substituir os itens atuais ("' +
-      db.title +
-      '") e limpar as imagens deles. Se quiser recuperar as imagens, importe o arquivo de imagens (.txt) logo em seguida. Continuar?';
-    if (!confirm(msg)) return;
+  if (!text.trim()) {
+    alert('Não há texto para importar (área de transferência vazia).');
+    return;
+  }
+  const parsed = parseListText(text);
+  if (parsed.ranked.length === 0 && parsed.unranked.length === 0) {
+    alert('Não foi possível reconhecer nenhum item nesse texto. Confira o formato (ex: "1. Nome").');
+    return;
+  }
+  const msg =
+    'Importar esta lista vai substituir os itens atuais ("' +
+    db.title +
+    '") e limpar as imagens deles. Se quiser recuperar as imagens, importe a lista de imagens (clipboard) logo em seguida. Continuar?';
+  if (!confirm(msg)) return;
 
-    db.ranked = parsed.ranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
-    db.unranked = parsed.unranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
-    if (parsed.title) db.title = parsed.title;
+  db.ranked = parsed.ranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
+  db.unranked = parsed.unranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
+  if (parsed.title) db.title = parsed.title;
 
-    titleInput.value = db.title;
-    render();
-  });
+  titleInput.value = db.title;
+  render();
 }
 
-/* Imagens (.txt) */
+/* Imagens (texto) */
 
 const TXT_IMAGE_HEADER_REGEX = /^imagens?\s*:?\s*$/i;
 const TXT_IMAGE_LINE_REGEX = /^(\d+)\.\s*(.+)$/;
@@ -326,37 +330,35 @@ function commitImagesToDb(parsedImages, targetDb) {
   }
 }
 
-function exportImagesTxt() {
+async function exportImagesTxt() {
   save();
-  downloadFile(safeFileBaseName() + '-imagens.txt', generateImagesText(db), 'text/plain;charset=utf-8');
+  const ok = await writeClipboardText(generateImagesText(db));
+  alert(ok ? 'Lista de imagens copiada! Cole onde quiser guardar.' : 'Não foi possível copiar. Tente novamente.');
 }
 
-function handleImagesTxtFileSelected(e) {
-  const file = e.target.files[0];
-  importImagesTxtInput.value = '';
-  if (!file) return;
+async function importImagesFromClipboard() {
+  const text = await readClipboardText();
+  if (text === null) return; // usuário cancelou
 
-  readFileAsText(file, (text) => {
-    if (!text.trim()) {
-      alert('O arquivo está vazio.');
-      return;
-    }
-    const parsedImages = parseImagesText(text);
-    if (parsedImages.rankedUrls.length === 0 && parsedImages.unrankedUrls.length === 0) {
-      alert('Não foi possível reconhecer nenhuma linha de imagem nesse arquivo. Confira o formato (ex: "1. https://...").');
-      return;
-    }
-    const check = validateImagesAgainstDb(parsedImages, db);
-    if (!check.success) {
-      alert(check.error);
-      return;
-    }
-    if (!confirm('Aplicar essas imagens vai sobrescrever as imagens atuais dos itens correspondentes. Continuar?')) {
-      return;
-    }
-    commitImagesToDb(parsedImages, db);
-    render();
-  });
+  if (!text.trim()) {
+    alert('Não há texto para importar (área de transferência vazia).');
+    return;
+  }
+  const parsedImages = parseImagesText(text);
+  if (parsedImages.rankedUrls.length === 0 && parsedImages.unrankedUrls.length === 0) {
+    alert('Não foi possível reconhecer nenhuma linha de imagem nesse texto. Confira o formato (ex: "1. https://...").');
+    return;
+  }
+  const check = validateImagesAgainstDb(parsedImages, db);
+  if (!check.success) {
+    alert(check.error);
+    return;
+  }
+  if (!confirm('Aplicar essas imagens vai sobrescrever as imagens atuais dos itens correspondentes. Continuar?')) {
+    return;
+  }
+  commitImagesToDb(parsedImages, db);
+  render();
 }
 
 /* Utilidades */
@@ -785,12 +787,10 @@ cancelBtn.addEventListener('click', closeModalFn);
 saveBtn.addEventListener('click', saveItem);
 
 exportListTxtBtn.addEventListener('click', exportListTxt);
-importListTxtBtn.addEventListener('click', () => importListTxtInput.click());
-importListTxtInput.addEventListener('change', handleListTxtFileSelected);
+importListTxtBtn.addEventListener('click', importListFromClipboard);
 
 exportImagesTxtBtn.addEventListener('click', exportImagesTxt);
-importImagesTxtBtn.addEventListener('click', () => importImagesTxtInput.click());
-importImagesTxtInput.addEventListener('change', handleImagesTxtFileSelected);
+importImagesTxtBtn.addEventListener('click', importImagesFromClipboard);
 
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModalFn();
