@@ -216,6 +216,7 @@ section {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    z-index: 50;
 }
 
 .hidden {
@@ -378,7 +379,7 @@ section {
     }
 
     .card img {
-        height: 180px;
+        height: 150px;
     }
 
     .modal-actions {
@@ -417,18 +418,27 @@ section {
     }
 
     .card img {
-        height: 210px;
+        height: 130px;
     }
 
     .info {
         padding: 10px;
     }
 
-    button,
     input,
     textarea,
     select {
         font-size: 16px; /* evita zoom automático no Android/iPhone */
+    }
+
+    button {
+        font-size: .85rem;
+        padding: 9px;
+    }
+
+    .controls button {
+        font-size: .85rem;
+        padding: 9px;
     }
 
     .modal {
