@@ -134,6 +134,10 @@ section {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 /* Cards */
 
 .card {
@@ -321,12 +325,6 @@ section {
 
 /* Responsividade */
 
-@media (max-width: 900px) {
-    .cols-3 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
 @media (max-width: 700px) {
     .toolbar {
         padding: 12px;
@@ -410,11 +408,6 @@ section {
 
     .tools-panel.open {
         grid-template-columns: 1fr;
-    }
-
-    .cols-2,
-    .cols-3 {
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .card img {
