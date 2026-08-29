@@ -1,34 +1,15 @@
 'use strict';
 
 /* =========================================================
-   RankIt — script.js (corrigido)
-
-   Principais mudanças em relação à versão anterior:
-   - Esquema de dados trocado de "items[] com campo rank" para
-     "ranked[] + unranked[]" explícitos. A ordem do array
-     ranked[] É o rank — isso elimina de vez o bug de empate
-     de ranks (não existe mais um número duplicado para
-     desempatar).
-   - Cartões são montados via DOM (createElement/textContent),
-     não mais via innerHTML com template string — corrige a
-     falha de XSS pelo nome/nota/imagem do item.
-   - IDs gerados com crypto.randomUUID() (com fallback), em vez
-     de Date.now(), evitando colisão de itens criados no mesmo
-     milissegundo.
-   - Arrastar-e-soltar só fica habilitado quando a grade de
-     ranking exibida é exatamente igual (mesmos itens, mesma
-     ordem) à lista completa — ou seja, com busca/filtro que
-     esconda itens, o arrasto é desativado em vez de
-     embaralhar a ordem real por trás dos itens escondidos.
-   - Cálculo de "depois de qual card soltar" agora considera
-     X e Y (funciona em grades de 2 e 3 colunas, não só 1).
-   - Coluna escolhida é persistida; imagem quebrada cai num
-     placeholder; exclusão pede confirmação; modal fecha com
-     Esc e tem foco inicial.
+   RankIt — script.js
    ========================================================= */
+
+/* Armazenamento (chaves do localStorage) */
 
 const STORAGE_KEY = 'rankit-v3';
 const LEGACY_STORAGE_KEY = 'rankit-v2';
+
+/* Estado e referências do DOM */
 
 /** @typedef {{ id:string, name:string, image:string, note:string, review:boolean }} Item */
 /** @typedef {{ title:string, columns:number, ranked:Item[], unranked:Item[] }} DB */
@@ -53,9 +34,12 @@ const columnsSelect = document.getElementById('columns');
 const newBtn = document.getElementById('newBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
-const exportJsonBtn = document.getElementById('exportJsonBtn');
-const importJsonBtn = document.getElementById('importJsonBtn');
-const importJsonInput = document.getElementById('importJsonInput');
+const exportListTxtBtn = document.getElementById('exportListTxtBtn');
+const importListTxtBtn = document.getElementById('importListTxtBtn');
+const importListTxtInput = document.getElementById('importListTxtInput');
+const exportImagesTxtBtn = document.getElementById('exportImagesTxtBtn');
+const importImagesTxtBtn = document.getElementById('importImagesTxtBtn');
+const importImagesTxtInput = document.getElementById('importImagesTxtInput');
 
 const nameInput = document.getElementById('nameInput');
 const imageInput = document.getElementById('imageInput');
@@ -66,9 +50,7 @@ const reviewInput = document.getElementById('reviewInput');
 titleInput.value = db.title;
 columnsSelect.value = String(db.columns);
 
-/* ---------------------------------------------------------
-   Persistência (com migração do formato antigo)
-   --------------------------------------------------------- */
+/* Persistência */
 
 function makeDefaultDb() {
   return { title: 'Meu Ranking', columns: 2, ranked: [], unranked: [] };
@@ -122,112 +104,262 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 }
 
-/* ---------------------------------------------------------
-   Backup em JSON (exportar / importar arquivo)
+/* Backup em arquivo (.txt) */
 
-   Complementa o localStorage: gera um arquivo .json com título,
-   colunas e as duas listas, para o usuário guardar fora do
-   navegador ou levar para outro dispositivo. Ao importar, os
-   ids dos itens são sempre regenerados (nunca confiamos em ids
-   vindos de um arquivo externo) e o arquivo é validado antes de
-   qualquer coisa ser sobrescrita.
-   --------------------------------------------------------- */
-
-function exportJson() {
-  save();
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    title: db.title,
-    columns: db.columns,
-    ranked: db.ranked,
-    unranked: db.unranked,
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const safeName =
+function safeFileBaseName() {
+  return (
     (db.title || 'ranking')
       .trim()
       .replace(/[^\p{L}\p{N}\-_ ]/gu, '')
-      .replace(/\s+/g, '-') || 'ranking';
-  a.download = safeName + '.json';
+      .replace(/\s+/g, '-') || 'ranking'
+  );
+}
+
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-function validateImportedItem(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const name = typeof raw.name === 'string' ? raw.name.trim() : '';
-  if (!name) return null;
-  return {
-    id: generateId(),
-    name,
-    image: typeof raw.image === 'string' ? raw.image.trim() : '',
-    note: typeof raw.note === 'string' ? raw.note.trim() : '',
-    review: !!raw.review,
-  };
-}
-
-// Recebe o JSON já parseado (objeto) e o db atual como fallback para
-// título/colunas ausentes; nunca lança exceção, sempre devolve
-// { success, error } ou { success, db }.
-function buildDbFromImport(parsed, fallback) {
-  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.ranked) || !Array.isArray(parsed.unranked)) {
-    return { success: false, error: 'Esse arquivo não tem o formato esperado (faltam as listas "ranked"/"unranked").' };
-  }
-  const ranked = parsed.ranked.map(validateImportedItem).filter(Boolean);
-  const unranked = parsed.unranked.map(validateImportedItem).filter(Boolean);
-  if (ranked.length === 0 && unranked.length === 0) {
-    return { success: false, error: 'Nenhum item válido foi encontrado no arquivo.' };
-  }
-  const title = typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title.trim() : fallback.title;
-  const columns = [1, 2, 3].includes(Number(parsed.columns)) ? Number(parsed.columns) : fallback.columns;
-  return { success: true, db: { title, columns, ranked, unranked } };
-}
-
-function handleJsonFileSelected(e) {
-  const file = e.target.files[0];
-  importJsonInput.value = ''; // permite selecionar o mesmo arquivo de novo depois
-  if (!file) return;
-
+function readFileAsText(file, onText) {
   const reader = new FileReader();
   reader.onerror = () => alert('Não foi possível ler o arquivo.');
-  reader.onload = () => {
-    let parsed;
-    try {
-      parsed = JSON.parse(String(reader.result));
-    } catch (err) {
-      alert('Esse arquivo não é um JSON válido.');
-      return;
-    }
-
-    const result = buildDbFromImport(parsed, { title: db.title, columns: db.columns });
-    if (!result.success) {
-      alert(result.error);
-      return;
-    }
-
-    if (!confirm('Importar este arquivo vai substituir a lista atual ("' + db.title + '"). Continuar?')) {
-      return;
-    }
-
-    db = result.db;
-    titleInput.value = db.title;
-    columnsSelect.value = String(db.columns);
-    ranking.className = 'grid cols-' + db.columns;
-    unranked.className = 'grid cols-' + db.columns;
-    render();
-  };
+  reader.onload = () => onText(String(reader.result));
   reader.readAsText(file);
 }
 
-/* ---------------------------------------------------------
-   Utilidades
-   --------------------------------------------------------- */
+/* Lista (.txt) */
+
+function formatTxtItemLine(rank, item, type) {
+  let s = type === 'ranked' ? rank + '. ' + item.name : '- ' + item.name;
+  if (item.note) s += ' (' + item.note + ')';
+  if (item.review) s += ' *';
+  return s;
+}
+
+function generateListText(dbObj) {
+  const lines = [];
+  if (dbObj.title) lines.push('Título: ' + dbObj.title);
+  lines.push('');
+  dbObj.ranked.forEach((item, idx) => lines.push(formatTxtItemLine(idx + 1, item, 'ranked')));
+  if (dbObj.unranked.length > 0) {
+    lines.push('');
+    lines.push('Não ranqueados:');
+    dbObj.unranked.forEach((item) => lines.push(formatTxtItemLine(null, item, 'unranked')));
+  }
+  const hasReview = [...dbObj.ranked, ...dbObj.unranked].some((i) => i.review);
+  if (hasReview) {
+    lines.push('');
+    lines.push('Legenda: * = A ser revisado');
+  }
+  return lines.join('\n');
+}
+
+const TXT_TITLE_REGEX = /^t[íi]tulo\s*:\s*(.+)$/i;
+const TXT_SECTION_REGEX = /^n[ãa]o\s+ranqueados?\s*:?\s*$/i;
+const TXT_LEGEND_REGEX = /^legenda/i;
+const TXT_RANKED_LINE_REGEX = /^(\d+)\.\s*(.+)$/;
+const TXT_UNRANKED_LINE_REGEX = /^-\s*(.+)$/;
+const TXT_REST_REGEX = /^(.*?)(?:\s*\(([^()]*)\))?\s*(\*)?\s*$/;
+
+function parseTxtRest(rest) {
+  const m = rest.match(TXT_REST_REGEX) || [];
+  return { name: (m[1] || '').trim(), note: m[2] ? m[2].trim() : '', review: !!m[3] };
+}
+
+function parseListText(text) {
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  let title = null;
+  const rankedRaw = [];
+  const unranked = [];
+  let inUnranked = false;
+
+  for (const line of lines) {
+    if (TXT_LEGEND_REGEX.test(line)) continue;
+    const titleMatch = line.match(TXT_TITLE_REGEX);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+      continue;
+    }
+    if (TXT_SECTION_REGEX.test(line)) {
+      inUnranked = true;
+      continue;
+    }
+    if (!inUnranked) {
+      const m = line.match(TXT_RANKED_LINE_REGEX);
+      if (m) {
+        rankedRaw.push({ rank: parseInt(m[1], 10), ...parseTxtRest(m[2]) });
+        continue;
+      }
+    }
+    const um = line.match(TXT_UNRANKED_LINE_REGEX);
+    if (um) {
+      unranked.push(parseTxtRest(um[1]));
+      continue;
+    }
+    if (inUnranked) unranked.push(parseTxtRest(line));
+  }
+  rankedRaw.sort((a, b) => a.rank - b.rank);
+  return { title, ranked: rankedRaw.map(({ rank, ...rest }) => rest), unranked };
+}
+
+function exportListTxt() {
+  save();
+  downloadFile(safeFileBaseName() + '-lista.txt', generateListText(db), 'text/plain;charset=utf-8');
+}
+
+function handleListTxtFileSelected(e) {
+  const file = e.target.files[0];
+  importListTxtInput.value = '';
+  if (!file) return;
+
+  readFileAsText(file, (text) => {
+    if (!text.trim()) {
+      alert('O arquivo está vazio.');
+      return;
+    }
+    const parsed = parseListText(text);
+    if (parsed.ranked.length === 0 && parsed.unranked.length === 0) {
+      alert('Não foi possível reconhecer nenhum item nesse arquivo. Confira o formato (ex: "1. Nome").');
+      return;
+    }
+    const msg =
+      'Importar esta lista vai substituir os itens atuais ("' +
+      db.title +
+      '") e limpar as imagens deles. Se quiser recuperar as imagens, importe o arquivo de imagens (.txt) logo em seguida. Continuar?';
+    if (!confirm(msg)) return;
+
+    db.ranked = parsed.ranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
+    db.unranked = parsed.unranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
+    if (parsed.title) db.title = parsed.title;
+
+    titleInput.value = db.title;
+    render();
+  });
+}
+
+/* Imagens (.txt) */
+
+const TXT_IMAGE_HEADER_REGEX = /^imagens?\s*:?\s*$/i;
+const TXT_IMAGE_LINE_REGEX = /^(\d+)\.\s*(.+)$/;
+
+function generateImagesText(dbObj) {
+  const totalItems = dbObj.ranked.length + dbObj.unranked.length;
+  if (totalItems === 0) return '(a lista atual não tem itens)';
+  const lines = ['Imagem:', ''];
+  dbObj.ranked.forEach((item, idx) => {
+    lines.push(idx + 1 + '. ' + (item.image ? item.image : '(sem imagem)'));
+  });
+  if (dbObj.unranked.length > 0) {
+    lines.push('');
+    lines.push('Não ranqueados:');
+    dbObj.unranked.forEach((item, idx) => {
+      lines.push(idx + 1 + '. ' + (item.image ? item.image : '(sem imagem)'));
+    });
+  }
+  return lines.join('\n');
+}
+
+function parseImagesText(text) {
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  let section = 'ranked'; // tolerante: sem cabeçalho, trata linhas numeradas como ranqueadas
+  let hasUnrankedSection = false;
+  const rankedUrls = [];
+  const unrankedUrls = [];
+
+  for (const line of lines) {
+    if (TXT_IMAGE_HEADER_REGEX.test(line)) {
+      section = 'ranked';
+      continue;
+    }
+    if (TXT_SECTION_REGEX.test(line)) {
+      section = 'unranked';
+      hasUnrankedSection = true;
+      continue;
+    }
+    if (TXT_LEGEND_REGEX.test(line)) continue;
+    const m = line.match(TXT_IMAGE_LINE_REGEX);
+    if (!m) continue;
+    const url = /^\(sem imagem\)$/i.test(m[2].trim()) ? '' : m[2].trim();
+    (section === 'unranked' ? unrankedUrls : rankedUrls).push(url);
+  }
+  return { rankedUrls, unrankedUrls, hasUnrankedSection };
+}
+
+function validateImagesAgainstDb(parsedImages, targetDb) {
+  const errors = [];
+  if (parsedImages.rankedUrls.length !== targetDb.ranked.length) {
+    errors.push(
+      'A seção de ranqueados tem ' +
+        parsedImages.rankedUrls.length +
+        ' linha(s), mas a lista atual tem ' +
+        targetDb.ranked.length +
+        ' item(ns) ranqueado(s).'
+    );
+  }
+  if (parsedImages.hasUnrankedSection && parsedImages.unrankedUrls.length !== targetDb.unranked.length) {
+    errors.push(
+      'A seção "Não ranqueados" tem ' +
+        parsedImages.unrankedUrls.length +
+        ' linha(s), mas a lista atual tem ' +
+        targetDb.unranked.length +
+        ' item(ns) não ranqueado(s).'
+    );
+  }
+  return errors.length > 0 ? { success: false, error: errors.join(' ') } : { success: true };
+}
+
+function commitImagesToDb(parsedImages, targetDb) {
+  targetDb.ranked.forEach((item, idx) => {
+    item.image = parsedImages.rankedUrls[idx];
+  });
+  if (parsedImages.hasUnrankedSection) {
+    targetDb.unranked.forEach((item, idx) => {
+      item.image = parsedImages.unrankedUrls[idx];
+    });
+  }
+}
+
+function exportImagesTxt() {
+  save();
+  downloadFile(safeFileBaseName() + '-imagens.txt', generateImagesText(db), 'text/plain;charset=utf-8');
+}
+
+function handleImagesTxtFileSelected(e) {
+  const file = e.target.files[0];
+  importImagesTxtInput.value = '';
+  if (!file) return;
+
+  readFileAsText(file, (text) => {
+    if (!text.trim()) {
+      alert('O arquivo está vazio.');
+      return;
+    }
+    const parsedImages = parseImagesText(text);
+    if (parsedImages.rankedUrls.length === 0 && parsedImages.unrankedUrls.length === 0) {
+      alert('Não foi possível reconhecer nenhuma linha de imagem nesse arquivo. Confira o formato (ex: "1. https://...").');
+      return;
+    }
+    const check = validateImagesAgainstDb(parsedImages, db);
+    if (!check.success) {
+      alert(check.error);
+      return;
+    }
+    if (!confirm('Aplicar essas imagens vai sobrescrever as imagens atuais dos itens correspondentes. Continuar?')) {
+      return;
+    }
+    commitImagesToDb(parsedImages, db);
+    render();
+  });
+}
+
+/* Utilidades */
 
 function generateId() {
   if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -260,9 +392,7 @@ function removeItem(id) {
   db.unranked = db.unranked.filter((i) => i.id !== id);
 }
 
-/* ---------------------------------------------------------
-   Lógica de rank (testada isoladamente antes de entrar aqui)
-   --------------------------------------------------------- */
+/* Lógica de rank */
 
 function clampRank(inputRank, length) {
   if (inputRank === null || inputRank === undefined) return null;
@@ -280,9 +410,7 @@ function insertAt(array, item, position) {
   return copy;
 }
 
-/* ---------------------------------------------------------
-   Estatísticas
-   --------------------------------------------------------- */
+/* Estatísticas */
 
 function updateStats() {
   totalItemsEl.textContent = db.ranked.length + db.unranked.length + ' itens';
@@ -292,9 +420,7 @@ function updateStats() {
   unrankedCountEl.textContent = db.unranked.length + ' não ranqueados';
 }
 
-/* ---------------------------------------------------------
-   Renderização
-   --------------------------------------------------------- */
+/* Renderização */
 
 function createCard(item, isRanked, rankNumber, canReorder) {
   const card = document.createElement('div');
@@ -408,9 +534,7 @@ function render() {
   });
 }
 
-/* ---------------------------------------------------------
-   Modal — adicionar / editar item
-   --------------------------------------------------------- */
+/* Modal (adicionar / editar item) */
 
 function openModal(item = null) {
   editingId = item ? item.id : null;
@@ -495,10 +619,7 @@ function deleteItem(id) {
   render();
 }
 
-/* ---------------------------------------------------------
-   Arrastar e soltar (só na grade de ranking, quando
-   canReorder=true — ver render())
-   --------------------------------------------------------- */
+/* Arrastar e soltar */
 
 function rebuildRanksFromDOM() {
   const orderedIds = [...ranking.children].map((c) => c.dataset.id);
@@ -550,9 +671,7 @@ ranking.addEventListener('dragover', (e) => {
   }
 });
 
-/* ---------------------------------------------------------
-   Eventos gerais
-   --------------------------------------------------------- */
+/* Eventos gerais */
 
 titleInput.addEventListener('input', save);
 searchInput.addEventListener('input', render);
@@ -569,9 +688,13 @@ newBtn.addEventListener('click', () => openModal());
 cancelBtn.addEventListener('click', closeModalFn);
 saveBtn.addEventListener('click', saveItem);
 
-exportJsonBtn.addEventListener('click', exportJson);
-importJsonBtn.addEventListener('click', () => importJsonInput.click());
-importJsonInput.addEventListener('change', handleJsonFileSelected);
+exportListTxtBtn.addEventListener('click', exportListTxt);
+importListTxtBtn.addEventListener('click', () => importListTxtInput.click());
+importListTxtInput.addEventListener('change', handleListTxtFileSelected);
+
+exportImagesTxtBtn.addEventListener('click', exportImagesTxt);
+importImagesTxtBtn.addEventListener('click', () => importImagesTxtInput.click());
+importImagesTxtInput.addEventListener('change', handleImagesTxtFileSelected);
 
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModalFn();
@@ -581,9 +704,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModalFn();
 });
 
-/* ---------------------------------------------------------
-   Inicialização
-   --------------------------------------------------------- */
+/* Inicialização */
 
 ranking.className = 'grid cols-' + db.columns;
 unranked.className = 'grid cols-' + db.columns;

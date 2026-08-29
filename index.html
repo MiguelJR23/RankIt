@@ -29,8 +29,13 @@
             <option value="3">3 colunas</option>
         </select>
         <button id="newBtn" type="button">Novo</button>
-        <button id="exportJsonBtn" type="button">Exportar JSON</button>
-        <button id="importJsonBtn" type="button">Importar JSON</button>
+        <button id="exportListTxtBtn" type="button">Exportar Lista (.txt)</button>
+        <button id="importListTxtBtn" type="button">Importar Lista (.txt)</button>
+        <input type="file" id="importListTxtInput" accept=".txt,text/plain" hidden>
+        <button id="exportImagesTxtBtn" type="button">Exportar Imagens (.txt)</button>
+        <button id="importImagesTxtBtn" type="button">Importar Imagens (.txt)</button>
+        <input type="file" id="importImagesTxtInput" accept=".txt,text/plain" hidden>
+        
         <input type="file" id="importJsonInput" accept="application/json,.json" hidden>
         </div>
     </header>
@@ -55,9 +60,10 @@
                 <textarea id="noteInput" placeholder="Nota" aria-label="Nota"></textarea>
                 <input id="rankInput" type="number" min="1" placeholder="Rank" aria-label="Posição no ranking">
 
-                <label>
+                <label class="review-check">
                     <input id="reviewInput" type="checkbox">
-                    A revisar
+                    <span class="checkmark"></span>
+                    <span>A revisar</span>
                 </label>
             <div class="modal-actions">
                 <button id="cancelBtn" type="button">Cancelar</button>
