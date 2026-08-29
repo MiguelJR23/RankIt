@@ -32,6 +32,8 @@ const searchInput = document.getElementById('search');
 const filterSelect = document.getElementById('filter');
 const columnsSelect = document.getElementById('columns');
 const newBtn = document.getElementById('newBtn');
+const toolsToggleBtn = document.getElementById('toolsToggleBtn');
+const toolsPanel = document.getElementById('toolsPanel');
 const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
 const exportListTxtBtn = document.getElementById('exportListTxtBtn');
@@ -785,6 +787,12 @@ columnsSelect.addEventListener('change', (e) => {
 newBtn.addEventListener('click', () => openModal());
 cancelBtn.addEventListener('click', closeModalFn);
 saveBtn.addEventListener('click', saveItem);
+
+toolsToggleBtn.addEventListener('click', () => {
+  const isOpen = toolsPanel.classList.toggle('open');
+  toolsToggleBtn.setAttribute('aria-expanded', String(isOpen));
+  toolsToggleBtn.textContent = isOpen ? '✕ Fechar' : '☰ Ferramentas';
+});
 
 exportListTxtBtn.addEventListener('click', exportListTxt);
 importListTxtBtn.addEventListener('click', importListFromClipboard);

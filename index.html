@@ -17,6 +17,10 @@
         </div>
         <div class="controls">
         <input id="search" placeholder="Pesquisar" aria-label="Pesquisar itens">
+        <button id="newBtn" type="button">Novo</button>
+        <button id="toolsToggleBtn" type="button" class="tools-toggle" aria-expanded="false" aria-controls="toolsPanel">☰ Ferramentas</button>
+
+        <div id="toolsPanel" class="tools-panel">
         <select id="filter" aria-label="Filtrar itens">
             <option value="all">Todos</option>
             <option value="ranked">Ranqueados</option>
@@ -28,13 +32,11 @@
             <option value="2" selected>2 colunas</option>
             <option value="3">3 colunas</option>
         </select>
-        <button id="newBtn" type="button">Novo</button>
         <button id="exportListTxtBtn" type="button">Exportar Lista (.txt)</button>
         <button id="importListTxtBtn" type="button">Importar Lista (.txt)</button>
-        <input type="file" id="importListTxtInput" accept=".txt,text/plain" hidden>
         <button id="exportImagesTxtBtn" type="button">Exportar Imagens (.txt)</button>
         <button id="importImagesTxtBtn" type="button">Importar Imagens (.txt)</button>
-        <input type="file" id="importImagesTxtInput" accept=".txt,text/plain" hidden>
+        </div>
         </div>
     </header>
 

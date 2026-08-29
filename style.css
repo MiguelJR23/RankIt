@@ -56,8 +56,19 @@ body {
     align-items: stretch;
 }
 
-.controls > * {
+.controls > *,
+.tools-panel > * {
     min-width: 0;
+}
+
+/* Gaveta de ferramentas (filtro, colunas, exportar/importar) */
+
+.tools-toggle {
+    display: none;
+}
+
+.tools-panel {
+    display: contents;
 }
 
 input,
@@ -112,15 +123,15 @@ section {
 /* Colunas */
 
 .cols-1 {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .cols-2 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .cols-3 {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* Cards */
@@ -132,6 +143,7 @@ section {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-width: 0;
     transition: .25s;
 }
 
@@ -164,11 +176,15 @@ section {
 .rank {
     font-weight: bold;
     color: #60a5fa;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .note {
     color: #ccc;
     font-size: .9rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .review {
@@ -306,7 +322,7 @@ section {
 
 @media (max-width: 900px) {
     .cols-3 {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -346,6 +362,21 @@ section {
         grid-column: 1 / -1;
     }
 
+    .tools-toggle {
+        display: block;
+    }
+
+    .tools-panel {
+        display: none;
+    }
+
+    .tools-panel.open {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
     .card img {
         height: 180px;
     }
@@ -376,9 +407,13 @@ section {
         grid-template-columns: 1fr;
     }
 
+    .tools-panel.open {
+        grid-template-columns: 1fr;
+    }
+
     .cols-2,
     .cols-3 {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .card img {
