@@ -11,8 +11,8 @@ const LEGACY_STORAGE_KEY = 'rankit-v2';
 
 /* Estado e referências do DOM */
 
-/** @typedef {{ id:string, name:string, image:string, note:string, review:boolean }} Item */
-/** @typedef {{ title:string, columns:number, ranked:Item[], unranked:Item[] }} DB */
+/** @typedef {{ id:string, name:string, image:string, note:string, review:boolean, moveDelta:number, isNew:boolean }} Item */
+/** @typedef {{ title:string, columns:(number|string), ranked:Item[], unranked:Item[] }} DB */
 
 /** @type {DB} */
 let db = loadDb();
@@ -40,6 +40,7 @@ const exportListTxtBtn = document.getElementById('exportListTxtBtn');
 const importListTxtBtn = document.getElementById('importListTxtBtn');
 const exportImagesTxtBtn = document.getElementById('exportImagesTxtBtn');
 const importImagesTxtBtn = document.getElementById('importImagesTxtBtn');
+const clearMarkersBtn = document.getElementById('clearMarkersBtn');
 
 const nameInput = document.getElementById('nameInput');
 const imageInput = document.getElementById('imageInput');
@@ -81,6 +82,8 @@ function loadDb() {
         image: i.image || '',
         note: i.note || '',
         review: !!i.review,
+        moveDelta: 0,
+        isNew: false,
       };
       if (i.rank === null || i.rank === undefined) rebuilt.unranked.push(item);
       else rebuilt.ranked.push(item);
@@ -93,7 +96,7 @@ function loadDb() {
   }
   return {
     title: parsed.title || 'Meu Ranking',
-    columns: Number(parsed.columns) || 2,
+    columns: parsed.columns === 'custom' ? 'custom' : Number(parsed.columns) || 2,
     ranked: parsed.ranked,
     unranked: parsed.unranked,
   };
@@ -148,6 +151,8 @@ function formatTxtItemLine(rank, item, type) {
   let s = type === 'ranked' ? rank + '. ' + item.name : '- ' + item.name;
   if (item.note) s += ' (' + item.note + ')';
   if (item.review) s += ' *';
+  if (item.isNew) s += ' !';
+  if (item.moveDelta) s += ' [' + (item.moveDelta > 0 ? '+' : '') + item.moveDelta + ']';
   return s;
 }
 
@@ -174,11 +179,19 @@ const TXT_SECTION_REGEX = /^n[ãa]o\s+ranqueados?\s*:?\s*$/i;
 const TXT_LEGEND_REGEX = /^legenda/i;
 const TXT_RANKED_LINE_REGEX = /^(\d+)\.\s*(.+)$/;
 const TXT_UNRANKED_LINE_REGEX = /^-\s*(.+)$/;
-const TXT_REST_REGEX = /^(.*?)(?:\s*\(([^()]*)\))?\s*(\*)?\s*$/;
+const TXT_REST_REGEX = /^(.*?)(?:\s*\(([^()]*)\))?\s*(\*)?\s*(?:!)?\s*(?:\[([+-]\d+)\])?\s*$/;
 
 function parseTxtRest(rest) {
   const m = rest.match(TXT_REST_REGEX) || [];
-  return { name: (m[1] || '').trim(), note: m[2] ? m[2].trim() : '', review: !!m[3] };
+  const moveDelta = m[4] ? parseInt(m[4], 10) : 0;
+  // "isNew" (a faixa "Novo") nunca é atribuído a partir de texto importado —
+  // esse marcador só existe para itens criados pelo botão "Novo".
+  return {
+    name: (m[1] || '').trim(),
+    note: m[2] ? m[2].trim() : '',
+    review: !!m[3],
+    moveDelta: Number.isFinite(moveDelta) ? moveDelta : 0,
+  };
 }
 
 function parseListText(text) {
@@ -242,8 +255,24 @@ async function importListFromClipboard() {
     '") e limpar as imagens deles. Se quiser recuperar as imagens, importe a lista de imagens (clipboard) logo em seguida. Continuar?';
   if (!confirm(msg)) return;
 
-  db.ranked = parsed.ranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
-  db.unranked = parsed.unranked.map((i) => ({ id: generateId(), name: i.name, image: '', note: i.note, review: i.review }));
+  db.ranked = parsed.ranked.map((i) => ({
+    id: generateId(),
+    name: i.name,
+    image: '',
+    note: i.note,
+    review: i.review,
+    moveDelta: i.moveDelta || 0,
+    isNew: false,
+  }));
+  db.unranked = parsed.unranked.map((i) => ({
+    id: generateId(),
+    name: i.name,
+    image: '',
+    note: i.note,
+    review: i.review,
+    moveDelta: i.moveDelta || 0,
+    isNew: false,
+  }));
   if (parsed.title) db.title = parsed.title;
 
   titleInput.value = db.title;
@@ -396,6 +425,15 @@ function removeItem(id) {
   db.unranked = db.unranked.filter((i) => i.id !== id);
 }
 
+function clearAllMarkers() {
+  if (!confirm('Isso vai remover as marcações de [+/-] e a faixa "Novo" de todos os itens. Continuar?')) return;
+  [...db.ranked, ...db.unranked].forEach((item) => {
+    item.moveDelta = 0;
+    item.isNew = false;
+  });
+  render();
+}
+
 /* Lógica de rank */
 
 function clampRank(inputRank, length) {
@@ -437,13 +475,26 @@ function createCard(item, isRanked, rankNumber, canReorder) {
     card.title = 'Limpe a busca e o filtro "A Revisar" para reordenar arrastando';
   }
 
+  if (item.isNew) {
+    const ribbon = document.createElement('span');
+    ribbon.className = 'new-ribbon';
+    ribbon.textContent = 'Novo';
+    card.appendChild(ribbon);
+  }
+
   const img = document.createElement('img');
   const url = safeImageUrl(item.image);
   img.src = url || placeholder(item.name);
   img.alt = item.name;
   img.loading = 'lazy';
+  // No modo "Personalizado", so imagens de verdade (nao o placeholder) usam
+  // altura natural -- sem imagem real, o card mantem o tamanho padrao.
+  if (db.columns === 'custom' && url) {
+    img.classList.add('custom-size');
+  }
   img.addEventListener('error', () => {
     img.src = placeholder(item.name);
+    img.classList.remove('custom-size');
   });
   card.appendChild(img);
 
@@ -452,7 +503,13 @@ function createCard(item, isRanked, rankNumber, canReorder) {
 
   const rankLine = document.createElement('div');
   rankLine.className = 'rank';
-  rankLine.textContent = (isRanked ? rankNumber + '. ' : '— ') + item.name;
+  rankLine.appendChild(document.createTextNode((isRanked ? rankNumber + '. ' : '— ') + item.name));
+  if (item.moveDelta) {
+    const moveBadge = document.createElement('span');
+    moveBadge.className = 'move-badge ' + (item.moveDelta > 0 ? 'move-up' : 'move-down');
+    moveBadge.textContent = ' [' + (item.moveDelta > 0 ? '+' : '') + item.moveDelta + ']';
+    rankLine.appendChild(moveBadge);
+  }
   info.appendChild(rankLine);
 
   if (item.review) {
@@ -472,101 +529,26 @@ function createCard(item, isRanked, rankNumber, canReorder) {
   const actions = document.createElement('div');
   actions.className = 'actions';
 
-  const editBtn = document.createElement('button');
-  editBtn.type = 'button';
-  editBtn.textContent = '✏';
-  editBtn.setAttribute('aria-label', 'Editar ' + item.name);
-  editBtn.addEventListener('click', () => editItem(item.id));
+  if (isRanked) {
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'move-btn';
+    upBtn.textContent = '▲';
+    upBtn.setAttribute('aria-label', 'Subir ' + item.name + ' uma posicao');
+    upBtn.disabled = rankNumber <= 1;
+    upBtn.addEventListener('click', () => moveItemUp(item.id));
 
-  const delBtn = document.createElement('button');
-  delBtn.type = 'button';
-  delBtn.textContent = '🗑';
-  delBtn.setAttribute('aria-label', 'Excluir ' + item.name);
-  delBtn.addEventListener('click', () => deleteItem(item.id));
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'move-btn';
+    downBtn.textContent = '▼';
+    downBtn.setAttribute('aria-label', 'Descer ' + item.name + ' uma posicao');
+    downBtn.disabled = rankNumber >= db.ranked.length;
+    downBtn.addEventListener('click', () => moveItemDown(item.id));
 
-  actions.appendChild(editBtn);
-  actions.appendChild(delBtn);
-  info.appendChild(actions);
-  card.appendChild(info);
-
-  if (isDraggable) {
-    card.addEventListener('dragstart', () => card.classList.add('dragging'));
-    card.addEventListener('dragend', () => {
-      card.classList.remove('dragging');
-      rebuildRanksFromDOM();
-    });
+    actions.appendChild(upBtn);
+    actions.appendChild(downBtn);
   }
-
-  return card;
-}
-
-function insertAt(array, item, position) {
-  const copy = array.slice();
-  copy.splice(position - 1, 0, item);
-  return copy;
-}
-
-/* ---------------------------------------------------------
-   Estatísticas
-   --------------------------------------------------------- */
-
-function updateStats() {
-  totalItemsEl.textContent = db.ranked.length + db.unranked.length + ' itens';
-  const reviewCount =
-    db.ranked.filter((i) => i.review).length + db.unranked.filter((i) => i.review).length;
-  reviewCountEl.textContent = reviewCount + ' revisão';
-  unrankedCountEl.textContent = db.unranked.length + ' não ranqueados';
-}
-
-/* ---------------------------------------------------------
-   Renderização
-   --------------------------------------------------------- */
-
-function createCard(item, isRanked, rankNumber, canReorder) {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.dataset.id = item.id;
-
-  const isDraggable = isRanked && canReorder;
-  card.draggable = isDraggable;
-  if (isRanked && !canReorder) {
-    card.title = 'Limpe a busca e o filtro "A Revisar" para reordenar arrastando';
-  }
-
-  const img = document.createElement('img');
-  const url = safeImageUrl(item.image);
-  img.src = url || placeholder(item.name);
-  img.alt = item.name;
-  img.loading = 'lazy';
-  img.addEventListener('error', () => {
-    img.src = placeholder(item.name);
-  });
-  card.appendChild(img);
-
-  const info = document.createElement('div');
-  info.className = 'info';
-
-  const rankLine = document.createElement('div');
-  rankLine.className = 'rank';
-  rankLine.textContent = (isRanked ? rankNumber + '. ' : '— ') + item.name;
-  info.appendChild(rankLine);
-
-  if (item.review) {
-    const review = document.createElement('div');
-    review.className = 'review';
-    review.textContent = '★ A revisar';
-    info.appendChild(review);
-  }
-
-  if (item.note) {
-    const note = document.createElement('div');
-    note.className = 'note';
-    note.textContent = item.note;
-    info.appendChild(note);
-  }
-
-  const actions = document.createElement('div');
-  actions.className = 'actions';
 
   const editBtn = document.createElement('button');
   editBtn.type = 'button';
@@ -692,7 +674,7 @@ function saveItem() {
     item.note = note;
     item.review = review;
   } else {
-    item = { id: generateId(), name, image, note, review };
+    item = { id: generateId(), name, image, note, review, moveDelta: 0, isNew: true };
   }
 
   const rank = clampRank(rankRaw, db.ranked.length);
@@ -716,6 +698,24 @@ function deleteItem(id) {
   if (!item) return;
   if (!confirm('Excluir "' + item.name + '"?')) return;
   removeItem(id);
+  render();
+}
+
+function moveItemUp(id) {
+  const idx = db.ranked.findIndex((i) => i.id === id);
+  if (idx <= 0) return; // já é o primeiro
+  const [item] = db.ranked.splice(idx, 1);
+  db.ranked.splice(idx - 1, 0, item);
+  item.moveDelta = (item.moveDelta || 0) + 1;
+  render();
+}
+
+function moveItemDown(id) {
+  const idx = db.ranked.findIndex((i) => i.id === id);
+  if (idx === -1 || idx >= db.ranked.length - 1) return; // já é o último
+  const [item] = db.ranked.splice(idx, 1);
+  db.ranked.splice(idx + 1, 0, item);
+  item.moveDelta = (item.moveDelta || 0) - 1;
   render();
 }
 
@@ -778,7 +778,8 @@ searchInput.addEventListener('input', render);
 filterSelect.addEventListener('change', render);
 
 columnsSelect.addEventListener('change', (e) => {
-  db.columns = Number(e.target.value);
+  const val = e.target.value;
+  db.columns = val === 'custom' ? 'custom' : Number(val);
   ranking.className = 'grid cols-' + db.columns;
   unranked.className = 'grid cols-' + db.columns;
   save();
@@ -800,6 +801,8 @@ importListTxtBtn.addEventListener('click', importListFromClipboard);
 exportImagesTxtBtn.addEventListener('click', exportImagesTxt);
 importImagesTxtBtn.addEventListener('click', importImagesFromClipboard);
 
+clearMarkersBtn.addEventListener('click', clearAllMarkers);
+
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModalFn();
 });
@@ -809,6 +812,24 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* Inicialização */
+
+const fourColsOption = columnsSelect.querySelector('option[value="4"]');
+const mobileColsQuery = window.matchMedia('(max-width: 480px)');
+
+function applyMobileColumnsGuard() {
+  const isMobile = mobileColsQuery.matches;
+  fourColsOption.hidden = isMobile;
+  if (isMobile && db.columns === 4) {
+    db.columns = 3;
+    columnsSelect.value = '3';
+    ranking.className = 'grid cols-' + db.columns;
+    unranked.className = 'grid cols-' + db.columns;
+    save();
+  }
+}
+
+mobileColsQuery.addEventListener('change', applyMobileColumnsGuard);
+applyMobileColumnsGuard();
 
 ranking.className = 'grid cols-' + db.columns;
 unranked.className = 'grid cols-' + db.columns;
