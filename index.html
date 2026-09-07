@@ -32,8 +32,52 @@
             <option value="2" selected>2 colunas</option>
             <option value="3">3 colunas</option>
             <option value="4">4 colunas</option>
+            <option value="custom">Personalizado</option>
         </select>
         <button id="exportListTxtBtn" type="button">Exportar Lista</button>
+        <button id="importListTxtBtn" type="button">Importar Lista</button>
+        <button id="exportImagesTxtBtn" type="button">Exportar Imagens</button>
+        <button id="importImagesTxtBtn" type="button">Importar Imagens</button>
+        <button id="clearMarkersBtn" type="button">Limpar marcações [+/-] e Novo</button>
+        </div>
+        </div>
+    </header>
+
+    <main>
+     <section>
+        <h2>Ranking</h2>
+        <div id="ranking" class="grid cols-2"></div>
+     </section>
+     <section>
+        <h2>Não Ranqueados</h2>
+        <div id="unranked" class="grid cols-2"></div>
+     </section>
+    </main>
+
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-box">
+                <h2 id="modalTitle">Novo Item</h2>
+                <p id="formError" class="form-error" hidden></p>
+                <input id="nameInput" placeholder="Nome" aria-label="Nome do item">
+                <input id="imageInput" placeholder="URL da imagem" aria-label="URL da imagem">
+                <textarea id="noteInput" placeholder="Nota" aria-label="Nota"></textarea>
+                <input id="rankInput" type="number" min="1" placeholder="Rank" aria-label="Posição no ranking">
+
+                <label class="review-check">
+                    <input id="reviewInput" type="checkbox">
+                    <span class="checkmark"></span>
+                    <span>A revisar</span>
+                </label>
+            <div class="modal-actions">
+                <button id="cancelBtn" type="button">Cancelar</button>
+                <button id="saveBtn" type="button">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    </body>
+</html>
         <button id="importListTxtBtn" type="button">Importar Lista</button>
         <button id="exportImagesTxtBtn" type="button">Exportar Imagens</button>
         <button id="importImagesTxtBtn" type="button">Importar Imagens</button>
