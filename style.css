@@ -138,6 +138,10 @@ section {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.cols-custom {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
 /* Cards */
 
 .card {
@@ -148,7 +152,22 @@ section {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    position: relative;
     transition: .25s;
+}
+
+.new-ribbon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #facc15;
+    color: #1a1a1a;
+    font-size: .7rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .card:hover {
@@ -168,6 +187,14 @@ section {
     height: 220px;
     object-fit: cover;
     background: #111;
+}
+
+/* No modo "Personalizado", só itens com imagem de verdade usam altura
+   natural — sem imagem, cai no tamanho padrão acima. */
+.cols-custom .card img.custom-size {
+    height: auto;
+    max-height: 480px;
+    object-fit: contain;
 }
 
 .info {
@@ -196,14 +223,42 @@ section {
     font-weight: bold;
 }
 
+.move-badge {
+    font-size: .85rem;
+    font-weight: bold;
+}
+
+.move-up {
+    color: #4ade80;
+}
+
+.move-down {
+    color: var(--danger);
+}
+
 .actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
 }
 
 .actions button {
     flex: 1;
+    min-width: 40px;
+}
+
+.move-btn {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+}
+
+button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+button:disabled:hover {
+    transform: none;
 }
 
 .dragging {
