@@ -2,7 +2,7 @@
 <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title>RankIt</title>
         <link rel="stylesheet" href="style.css">
     </head>
@@ -75,47 +75,129 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
-    </body>
-</html>
-        <button id="importListTxtBtn" type="button">Importar Lista</button>
-        <button id="exportImagesTxtBtn" type="button">Exportar Imagens</button>
-        <button id="importImagesTxtBtn" type="button">Importar Imagens</button>
-        </div>
-        </div>
-    </header>
-
-    <main>
-     <section>
-        <h2>Ranking</h2>
-        <div id="ranking" class="grid cols-2"></div>
-     </section>
-     <section>
-        <h2>Não Ranqueados</h2>
-        <div id="unranked" class="grid cols-2"></div>
-     </section>
-    </main>
-
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
-        <div class="modal-box">
-                <h2 id="modalTitle">Novo Item</h2>
-                <p id="formError" class="form-error" hidden></p>
-                <input id="nameInput" placeholder="Nome" aria-label="Nome do item">
-                <input id="imageInput" placeholder="URL da imagem" aria-label="URL da imagem">
-                <textarea id="noteInput" placeholder="Nota" aria-label="Nota"></textarea>
-                <input id="rankInput" type="number" min="1" placeholder="Rank" aria-label="Posição no ranking">
-
-                <label class="review-check">
-                    <input id="reviewInput" type="checkbox">
-                    <span class="checkmark"></span>
-                    <span>A revisar</span>
-                </label>
+    <!-- Modal de confirmação genérico (usado por excluir, exportar, importar e
+         limpar marcações — tanto no mobile quanto no desktop). -->
+    <div id="confirmModalOverlay" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage" aria-hidden="true">
+        <div class="modal-box confirm-box">
+            <h2 id="confirmTitle">Confirmar?</h2>
+            <p id="confirmMessage"></p>
             <div class="modal-actions">
-                <button id="cancelBtn" type="button">Cancelar</button>
-                <button id="saveBtn" type="button">Salvar</button>
+                <button id="confirmCancelBtn" type="button">Cancelar</button>
+                <button id="confirmOkBtn" type="button">Confirmar</button>
             </div>
         </div>
     </div>
+
+    <!-- ============ Interface mobile (≤768px) ============ -->
+
+    <!-- Barra de pesquisa sobreposta, aberta pelo botão de lupa da toolbar -->
+    <div id="mobileSearchBar" class="mobile-search-bar hidden">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="mobileSearchInput" type="text" placeholder="Pesquisar" aria-label="Pesquisar itens">
+        <button id="mobileSearchCloseBtn" type="button" aria-label="Fechar pesquisa" title="Fechar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+        </button>
+    </div>
+
+    <!-- Gaveta "Ordenar" -->
+    <div id="sortSheetOverlay" class="sheet-overlay hidden">
+        <div class="sheet-box">
+            <div class="sheet-handle"></div>
+            <h2 class="sheet-title">Ordenar</h2>
+            <div class="sheet-content">
+                <select id="mobileFilterSelect" aria-label="Filtrar itens">
+                    <option value="all">Todos</option>
+                    <option value="ranked">Ranqueados</option>
+                    <option value="unranked">Não Ranqueados</option>
+                    <option value="review">A Revisar</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gaveta "Mais" -->
+    <div id="moreSheetOverlay" class="sheet-overlay hidden">
+        <div class="sheet-box">
+            <div class="sheet-handle"></div>
+            <h2 class="sheet-title">Mais opções</h2>
+            <div class="sheet-content">
+                <select id="mobileColumnsSelect" aria-label="Número de colunas">
+                    <option value="1">1 coluna</option>
+                    <option value="2" selected>2 colunas</option>
+                    <option value="3">3 colunas</option>
+                    <option value="4">4 colunas</option>
+                    <option value="custom">Personalizado</option>
+                </select>
+            </div>
+            <ul class="sheet-menu">
+                <li>
+                    <button id="mobileExportListBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <span>Exportar lista</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="mobileImportListBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Importar lista</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="mobileExportImagesBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                        <span>Exportar imagens</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="mobileImportImagesBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                        <span>Importar imagens</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="mobileClearMarkersBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8l-6-6a2 2 0 0 1 0-3l10-10a2 2 0 0 1 3 0l6 6a2 2 0 0 1 0 3L11 20"></path><line x1="8" y1="20" x2="14.5" y2="13.5"></line></svg>
+                        <span>Limpar marcações</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Barra de ferramentas fixa (só aparece em telas ≤768px) -->
+    <nav id="mobileToolbar" class="mobile-toolbar" aria-label="Ações do ranking">
+        <div class="mobile-toolbar-row mobile-toolbar-normal">
+            <button id="mobileNewBtn" type="button" class="mobile-tb-btn" aria-label="Novo item" title="Novo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button id="mobileSortBtn" type="button" class="mobile-tb-btn" aria-label="Ordenar" title="Ordenar" aria-expanded="false" aria-controls="sortSheetOverlay">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"></path><path d="M4 7l3-3 3 3"></path><path d="M17 20V4"></path><path d="M20 17l-3 3-3-3"></path></svg>
+            </button>
+            <button id="mobileSearchBtn" type="button" class="mobile-tb-btn" aria-label="Pesquisar" title="Pesquisar" aria-expanded="false" aria-controls="mobileSearchBar">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+            <button id="mobileMoreBtn" type="button" class="mobile-tb-btn" aria-label="Mais opções" title="Mais" aria-expanded="false" aria-controls="moreSheetOverlay">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>
+            </button>
+        </div>
+        <div class="mobile-toolbar-row mobile-toolbar-selected">
+            <button id="mobileExitBtn" type="button" class="mobile-tb-btn" aria-label="Sair da seleção" title="Sair">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+            </button>
+            <button id="mobileEditBtn" type="button" class="mobile-tb-btn" aria-label="Editar item selecionado" title="Editar">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            </button>
+            <button id="mobileDeleteBtn" type="button" class="mobile-tb-btn" aria-label="Excluir item selecionado" title="Excluir">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+            <button id="mobileUpBtn" type="button" class="mobile-tb-btn mobile-move-btn move-up-btn" aria-label="Subir item selecionado" title="Subir">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>
+            </button>
+            <button id="mobileDownBtn" type="button" class="mobile-tb-btn mobile-move-btn move-down-btn" aria-label="Descer item selecionado" title="Descer">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+        </div>
+    </nav>
 
     <script src="script.js"></script>
     </body>
