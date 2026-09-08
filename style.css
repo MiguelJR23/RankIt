@@ -279,7 +279,7 @@ button:disabled:hover {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .modal-box {
