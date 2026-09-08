@@ -17,6 +17,7 @@ const LEGACY_STORAGE_KEY = 'rankit-v2';
 /** @type {DB} */
 let db = loadDb();
 let editingId = null;
+let selectedItemId = null; // card selecionado (seleção mobile)
 
 const ranking = document.getElementById('ranking');
 const unranked = document.getElementById('unranked');
@@ -48,8 +49,45 @@ const noteInput = document.getElementById('noteInput');
 const rankInput = document.getElementById('rankInput');
 const reviewInput = document.getElementById('reviewInput');
 
+// Modal de confirmação genérico
+const confirmModalOverlay = document.getElementById('confirmModalOverlay');
+const confirmTitleEl = document.getElementById('confirmTitle');
+const confirmMessageEl = document.getElementById('confirmMessage');
+const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+const confirmOkBtn = document.getElementById('confirmOkBtn');
+
+// Interface mobile: toolbar inferior
+const mobileToolbar = document.getElementById('mobileToolbar');
+const mobileNewBtn = document.getElementById('mobileNewBtn');
+const mobileSortBtn = document.getElementById('mobileSortBtn');
+const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+const mobileMoreBtn = document.getElementById('mobileMoreBtn');
+const mobileExitBtn = document.getElementById('mobileExitBtn');
+const mobileEditBtn = document.getElementById('mobileEditBtn');
+const mobileDeleteBtn = document.getElementById('mobileDeleteBtn');
+const mobileUpBtn = document.getElementById('mobileUpBtn');
+const mobileDownBtn = document.getElementById('mobileDownBtn');
+
+// Interface mobile: busca sobreposta
+const mobileSearchBar = document.getElementById('mobileSearchBar');
+const mobileSearchInput = document.getElementById('mobileSearchInput');
+const mobileSearchCloseBtn = document.getElementById('mobileSearchCloseBtn');
+
+// Interface mobile: gavetas "Ordenar" e "Mais"
+const sortSheetOverlay = document.getElementById('sortSheetOverlay');
+const mobileFilterSelect = document.getElementById('mobileFilterSelect');
+const moreSheetOverlay = document.getElementById('moreSheetOverlay');
+const mobileColumnsSelect = document.getElementById('mobileColumnsSelect');
+const mobileExportListBtn = document.getElementById('mobileExportListBtn');
+const mobileImportListBtn = document.getElementById('mobileImportListBtn');
+const mobileExportImagesBtn = document.getElementById('mobileExportImagesBtn');
+const mobileImportImagesBtn = document.getElementById('mobileImportImagesBtn');
+const mobileClearMarkersBtn = document.getElementById('mobileClearMarkersBtn');
+
 titleInput.value = db.title;
 columnsSelect.value = String(db.columns);
+mobileColumnsSelect.value = String(db.columns);
+mobileFilterSelect.value = filterSelect.value;
 
 /* Persistência */
 
@@ -231,6 +269,12 @@ function parseListText(text) {
 }
 
 async function exportListTxt() {
+  const confirmed = await showConfirm({
+    title: 'Exportar lista?',
+    message: 'A lista atual será copiada para a área de transferência.',
+    confirmLabel: 'Exportar',
+  });
+  if (!confirmed) return;
   save();
   const ok = await writeClipboardText(generateListText(db));
   alert(ok ? 'Lista copiada! Cole onde quiser guardar.' : 'Não foi possível copiar. Tente novamente.');
@@ -249,11 +293,12 @@ async function importListFromClipboard() {
     alert('Não foi possível reconhecer nenhum item nesse texto. Confira o formato (ex: "1. Nome").');
     return;
   }
-  const msg =
-    'Importar esta lista vai substituir os itens atuais ("' +
-    db.title +
-    '") e limpar as imagens deles. Se quiser recuperar as imagens, importe a lista de imagens (clipboard) logo em seguida. Continuar?';
-  if (!confirm(msg)) return;
+  const confirmed = await showConfirm({
+    title: 'Importar lista?',
+    message: 'Os dados importados poderão substituir a lista atual, e as imagens dos itens serão limpas (importe o arquivo de imagens em seguida, se quiser).',
+    confirmLabel: 'Continuar',
+  });
+  if (!confirmed) return;
 
   db.ranked = parsed.ranked.map((i) => ({
     id: generateId(),
@@ -362,6 +407,12 @@ function commitImagesToDb(parsedImages, targetDb) {
 }
 
 async function exportImagesTxt() {
+  const confirmed = await showConfirm({
+    title: 'Exportar imagens?',
+    message: 'A lista de imagens atual será copiada para a área de transferência.',
+    confirmLabel: 'Exportar',
+  });
+  if (!confirmed) return;
   save();
   const ok = await writeClipboardText(generateImagesText(db));
   alert(ok ? 'Lista de imagens copiada! Cole onde quiser guardar.' : 'Não foi possível copiar. Tente novamente.');
@@ -385,9 +436,12 @@ async function importImagesFromClipboard() {
     alert(check.error);
     return;
   }
-  if (!confirm('Aplicar essas imagens vai sobrescrever as imagens atuais dos itens correspondentes. Continuar?')) {
-    return;
-  }
+  const confirmed = await showConfirm({
+    title: 'Importar imagens?',
+    message: 'As imagens importadas vão sobrescrever as imagens atuais dos itens correspondentes.',
+    confirmLabel: 'Continuar',
+  });
+  if (!confirmed) return;
   commitImagesToDb(parsedImages, db);
   render();
 }
@@ -425,8 +479,13 @@ function removeItem(id) {
   db.unranked = db.unranked.filter((i) => i.id !== id);
 }
 
-function clearAllMarkers() {
-  if (!confirm('Isso vai remover as marcações de [+/-] e a faixa "Novo" de todos os itens. Continuar?')) return;
+async function clearAllMarkers() {
+  const confirmed = await showConfirm({
+    title: 'Limpar marcações?',
+    message: 'As marcações atuais serão removidas.',
+    confirmLabel: 'Limpar',
+  });
+  if (!confirmed) return;
   [...db.ranked, ...db.unranked].forEach((item) => {
     item.moveDelta = 0;
     item.isNew = false;
@@ -468,6 +527,12 @@ function createCard(item, isRanked, rankNumber, canReorder) {
   const card = document.createElement('div');
   card.className = 'card';
   card.dataset.id = item.id;
+  if (item.id === selectedItemId) card.classList.add('selected');
+
+  card.addEventListener('click', () => {
+    if (!isMobileViewport()) return;
+    toggleCardSelection(item.id);
+  });
 
   const isDraggable = isRanked && canReorder;
   card.draggable = isDraggable;
@@ -614,7 +679,54 @@ function render() {
   filteredUnranked.forEach((item) => {
     unranked.appendChild(createCard(item, false, null, false));
   });
+
+  updateMobileToolbarState();
 }
+
+/* Modal de confirmação genérico */
+
+// Usado por excluir, exportar, importar e limpar marcações — tanto no
+// desktop quanto no mobile. Devolve uma Promise<boolean> (true = confirmou).
+function showConfirm({ title, message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = false }) {
+  return new Promise((resolve) => {
+    confirmTitleEl.textContent = title;
+    confirmMessageEl.textContent = message;
+    confirmCancelBtn.textContent = cancelLabel;
+    confirmOkBtn.textContent = confirmLabel;
+    confirmOkBtn.classList.toggle('danger-btn', danger);
+
+    confirmModalOverlay.classList.remove('hidden');
+    confirmModalOverlay.setAttribute('aria-hidden', 'false');
+    setTimeout(() => confirmOkBtn.focus(), 0);
+
+    function cleanup(result) {
+      confirmModalOverlay.classList.add('hidden');
+      confirmModalOverlay.setAttribute('aria-hidden', 'true');
+      confirmOkBtn.removeEventListener('click', onOk);
+      confirmCancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk() {
+      cleanup(true);
+    }
+    function onCancel() {
+      cleanup(false);
+    }
+
+    confirmOkBtn.addEventListener('click', onOk);
+    confirmCancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+confirmModalOverlay.addEventListener('click', (e) => {
+  if (e.target === confirmModalOverlay) confirmCancelBtn.click();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !confirmModalOverlay.classList.contains('hidden')) {
+    confirmCancelBtn.click();
+  }
+});
 
 /* Modal (adicionar / editar item) */
 
@@ -693,11 +805,18 @@ function editItem(id) {
   if (item) openModal(item);
 }
 
-function deleteItem(id) {
+async function deleteItem(id) {
   const item = findItem(id);
   if (!item) return;
-  if (!confirm('Excluir "' + item.name + '"?')) return;
+  const confirmed = await showConfirm({
+    title: 'Excluir item?',
+    message: 'Tem certeza que deseja excluir este item?',
+    confirmLabel: 'Excluir',
+    danger: true,
+  });
+  if (!confirmed) return;
   removeItem(id);
+  if (selectedItemId === id) selectedItemId = null;
   render();
 }
 
@@ -717,6 +836,36 @@ function moveItemDown(id) {
   db.ranked.splice(idx + 1, 0, item);
   item.moveDelta = (item.moveDelta || 0) - 1;
   render();
+}
+
+/* Seleção de card (mobile) */
+
+function isMobileViewport() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function toggleCardSelection(id) {
+  selectedItemId = selectedItemId === id ? null : id;
+  render();
+}
+
+function deselectCard() {
+  selectedItemId = null;
+  render();
+}
+
+function updateMobileToolbarState() {
+  if (selectedItemId && !findItem(selectedItemId)) {
+    selectedItemId = null;
+  }
+
+  mobileToolbar.classList.toggle('selected-mode', !!selectedItemId);
+  if (!selectedItemId) return;
+
+  const idx = db.ranked.findIndex((i) => i.id === selectedItemId);
+  const isRankedItem = idx !== -1;
+  mobileUpBtn.disabled = !isRankedItem || idx <= 0;
+  mobileDownBtn.disabled = !isRankedItem || idx >= db.ranked.length - 1;
 }
 
 /* Arrastar e soltar */
@@ -775,15 +924,26 @@ ranking.addEventListener('dragover', (e) => {
 
 titleInput.addEventListener('input', save);
 searchInput.addEventListener('input', render);
-filterSelect.addEventListener('change', render);
+function handleFilterChange(value) {
+  filterSelect.value = value;
+  mobileFilterSelect.value = value;
+  render();
+}
+filterSelect.addEventListener('change', (e) => handleFilterChange(e.target.value));
+mobileFilterSelect.addEventListener('change', (e) => handleFilterChange(e.target.value));
 
-columnsSelect.addEventListener('change', (e) => {
-  const val = e.target.value;
-  db.columns = val === 'custom' ? 'custom' : Number(val);
+function handleColumnsChange(rawValue) {
+  db.columns = rawValue === 'custom' ? 'custom' : Number(rawValue);
+  columnsSelect.value = String(db.columns);
+  mobileColumnsSelect.value = String(db.columns);
   ranking.className = 'grid cols-' + db.columns;
   unranked.className = 'grid cols-' + db.columns;
   save();
-});
+  render(); // re-renderiza os cards: necessário pro modo "Personalizado" aplicar
+            // a classe de imagem em tamanho natural nos itens já existentes
+}
+columnsSelect.addEventListener('change', (e) => handleColumnsChange(e.target.value));
+mobileColumnsSelect.addEventListener('change', (e) => handleColumnsChange(e.target.value));
 
 newBtn.addEventListener('click', () => openModal());
 cancelBtn.addEventListener('click', closeModalFn);
@@ -811,17 +971,137 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModalFn();
 });
 
+/* Interface mobile: toolbar inferior, busca, gavetas */
+
+// Toolbar — estado normal
+mobileNewBtn.addEventListener('click', () => openModal());
+mobileSortBtn.addEventListener('click', openSortSheet);
+mobileSearchBtn.addEventListener('click', openMobileSearch);
+mobileMoreBtn.addEventListener('click', openMoreSheet);
+
+// Toolbar — estado selecionado (reaproveita as funções já existentes)
+mobileExitBtn.addEventListener('click', deselectCard);
+mobileEditBtn.addEventListener('click', () => {
+  if (!selectedItemId) return;
+  editItem(selectedItemId);
+  deselectCard();
+});
+mobileDeleteBtn.addEventListener('click', () => {
+  if (selectedItemId) deleteItem(selectedItemId);
+});
+mobileUpBtn.addEventListener('click', () => {
+  if (selectedItemId) moveItemUp(selectedItemId);
+});
+mobileDownBtn.addEventListener('click', () => {
+  if (selectedItemId) moveItemDown(selectedItemId);
+});
+
+// Busca sobreposta
+function openMobileSearch() {
+  mobileSearchInput.value = searchInput.value;
+  mobileSearchBar.classList.remove('hidden');
+  requestAnimationFrame(() => mobileSearchBar.classList.add('open'));
+  mobileSearchBtn.setAttribute('aria-expanded', 'true');
+  setTimeout(() => mobileSearchInput.focus(), 50);
+}
+
+function closeMobileSearch() {
+  mobileSearchBar.classList.remove('open');
+  mobileSearchBtn.setAttribute('aria-expanded', 'false');
+  setTimeout(() => mobileSearchBar.classList.add('hidden'), 200);
+}
+
+mobileSearchInput.addEventListener('input', () => {
+  searchInput.value = mobileSearchInput.value;
+  render();
+});
+mobileSearchCloseBtn.addEventListener('click', closeMobileSearch);
+
+// Gaveta "Ordenar"
+function openSortSheet() {
+  sortSheetOverlay.classList.remove('hidden');
+  mobileSortBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeSortSheet() {
+  sortSheetOverlay.classList.add('hidden');
+  mobileSortBtn.setAttribute('aria-expanded', 'false');
+}
+
+sortSheetOverlay.addEventListener('click', (e) => {
+  if (e.target === sortSheetOverlay) closeSortSheet();
+});
+
+// Gaveta "Mais" (colunas + ações secundárias, todas reaproveitando funções existentes)
+function openMoreSheet() {
+  moreSheetOverlay.classList.remove('hidden');
+  mobileMoreBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeMoreSheet() {
+  moreSheetOverlay.classList.add('hidden');
+  mobileMoreBtn.setAttribute('aria-expanded', 'false');
+}
+
+moreSheetOverlay.addEventListener('click', (e) => {
+  if (e.target === moreSheetOverlay) closeMoreSheet();
+});
+
+mobileExportListBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  exportListTxt();
+});
+mobileImportListBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  importListFromClipboard();
+});
+mobileExportImagesBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  exportImagesTxt();
+});
+mobileImportImagesBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  importImagesFromClipboard();
+});
+mobileClearMarkersBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  clearAllMarkers();
+});
+
+// Esc fecha o que estiver aberto (busca ou qualquer uma das gavetas)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!sortSheetOverlay.classList.contains('hidden')) closeSortSheet();
+  else if (!moreSheetOverlay.classList.contains('hidden')) closeMoreSheet();
+  else if (mobileSearchBar.classList.contains('open')) closeMobileSearch();
+});
+
+// Ao cruzar de volta pro desktop (redimensionar/girar a tela), fecha
+// qualquer painel mobile aberto e sai do modo de seleção — nenhum deles
+// existe na interface desktop.
+const mobileBreakpointQuery = window.matchMedia('(max-width: 768px)');
+mobileBreakpointQuery.addEventListener('change', (e) => {
+  if (e.matches) return;
+  closeSortSheet();
+  closeMoreSheet();
+  closeMobileSearch();
+  if (selectedItemId) deselectCard();
+});
+
 /* Inicialização */
 
 const fourColsOption = columnsSelect.querySelector('option[value="4"]');
+const mobileFourColsOption = mobileColumnsSelect.querySelector('option[value="4"]');
 const mobileColsQuery = window.matchMedia('(max-width: 480px)');
 
 function applyMobileColumnsGuard() {
   const isMobile = mobileColsQuery.matches;
   fourColsOption.hidden = isMobile;
+  mobileFourColsOption.hidden = isMobile;
   if (isMobile && db.columns === 4) {
     db.columns = 3;
     columnsSelect.value = '3';
+    mobileColumnsSelect.value = '3';
     ranking.className = 'grid cols-' + db.columns;
     unranked.className = 'grid cols-' + db.columns;
     save();
