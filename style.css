@@ -275,7 +275,7 @@ button:disabled:hover {
     justify-content: center;
     align-items: center;
     padding: 20px;
-    z-index: 50;
+    z-index: 60;
 }
 
 .hidden {
@@ -376,6 +376,14 @@ button:disabled:hover {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+.confirm-box {
+    width: min(420px, 100%);
+}
+
+#confirmOkBtn.danger-btn {
+    background: var(--danger);
 }
 
 /* Responsividade */
@@ -496,5 +504,228 @@ button:disabled:hover {
     .modal-box {
         border-radius: 12px;
         max-height: 95vh;
+    }
+}
+
+/* =========================================================
+   Interface mobile: barra inferior fixa, gavetas "Ordenar" e
+   "Mais", busca sobreposta e seleção de card.
+   Fica atrás de tudo acima no desktop; só ativa em ≤768px.
+   ========================================================= */
+
+/* Card selecionado (mobile) */
+
+.card.selected {
+    border-color: #facc15;
+    border-width: 2px;
+    box-shadow: 0 0 0 1px #facc15;
+}
+
+/* Ícones (usados na toolbar mobile e nas gavetas) */
+
+.icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+/* Barra de pesquisa sobreposta */
+
+.mobile-search-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom));
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    z-index: 45;
+    transform: translateY(100%);
+    transition: transform .2s ease;
+}
+
+.mobile-search-bar.open {
+    transform: translateY(0);
+}
+
+.mobile-search-bar .icon {
+    color: var(--muted);
+}
+
+.mobile-search-bar input {
+    flex: 1;
+    min-width: 0;
+}
+
+.mobile-search-bar button {
+    background: transparent;
+    padding: 6px;
+    color: var(--muted);
+}
+
+/* Gavetas "Ordenar" e "Mais" */
+
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .6);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 55;
+}
+
+.sheet-box {
+    background: var(--panel);
+    width: 100%;
+    max-width: 500px;
+    border-radius: 20px 20px 0 0;
+    padding: 10px 20px calc(20px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    margin: 4px auto 0;
+}
+
+.sheet-title {
+    font-size: 1.1rem;
+}
+
+.sheet-content select {
+    width: 100%;
+}
+
+.sheet-menu {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.sheet-menu-item {
+    width: 100%;
+    background: transparent;
+    color: var(--text);
+    border-radius: 10px;
+    padding: 14px 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: flex-start;
+    font-size: 1rem;
+    text-align: left;
+    transition: background .15s ease;
+}
+
+.sheet-menu-item .icon {
+    color: var(--muted);
+}
+
+.sheet-menu-item:hover,
+.sheet-menu-item:active {
+    background: rgba(255, 255, 255, .06);
+    transform: none;
+}
+
+/* Barra de ferramentas inferior fixa */
+
+.mobile-toolbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    z-index: 40;
+    padding-bottom: env(safe-area-inset-bottom);
+    display: none;
+}
+
+.mobile-toolbar-row {
+    display: none;
+    width: 100%;
+}
+
+.mobile-toolbar-normal {
+    display: flex;
+}
+
+.mobile-toolbar.selected-mode .mobile-toolbar-normal {
+    display: none;
+}
+
+.mobile-toolbar.selected-mode .mobile-toolbar-selected {
+    display: flex;
+}
+
+.mobile-tb-btn {
+    flex: 1;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.mobile-tb-btn:hover,
+.mobile-tb-btn:active {
+    transform: none;
+    background: rgba(255, 255, 255, .06);
+}
+
+.mobile-tb-btn[aria-expanded="true"] {
+    color: var(--accent);
+}
+
+.mobile-tb-btn.move-up-btn {
+    color: #4ade80;
+}
+
+.mobile-tb-btn.move-down-btn {
+    color: var(--danger);
+}
+
+#mobileDeleteBtn {
+    color: var(--danger);
+}
+
+@media (max-width: 768px) {
+    /* A antiga barra de topo (busca, Novo, ☰ Ferramentas) some por
+       completo — tudo isso agora vive na toolbar inferior e nas gavetas. */
+    .controls {
+        display: none;
+    }
+
+    /* Os botões por-card de mover/editar/excluir saem do card: a
+       mesma ação passa a ficar disponível selecionando o card e usando
+       a toolbar inferior, evitando repetir a mesma ação em dois lugares. */
+    .actions {
+        display: none;
+    }
+
+    .card {
+        cursor: pointer;
+    }
+
+    main {
+        padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-toolbar {
+        display: block;
     }
 }
