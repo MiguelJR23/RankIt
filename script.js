@@ -91,6 +91,7 @@ const exportImageModalOverlay = document.getElementById('exportImageModalOverlay
 const exportImgCategorySelect = document.getElementById('exportImgCategorySelect');
 const exportImgIncludeTitle = document.getElementById('exportImgIncludeTitle');
 const exportImgIncludeImages = document.getElementById('exportImgIncludeImages');
+const exportImgUseProxy = document.getElementById('exportImgUseProxy');
 const exportImgIncludeNotes = document.getElementById('exportImgIncludeNotes');
 const exportImgIncludeNewBadge = document.getElementById('exportImgIncludeNewBadge');
 const exportImgIncludeUnranked = document.getElementById('exportImgIncludeUnranked');
@@ -1048,18 +1049,33 @@ function computeExportColumns(format, count) {
   return 4;
 }
 
-function loadImageForCanvas(url) {
+// Muitos hosts de imagem não enviam cabeçalho CORS, e sem ele o navegador
+// recusa desenhar a imagem num canvas que será exportado. O jeito de
+// contornar isso do lado do cliente é passar por um proxy que rebusca a
+// imagem e a reenvia com o cabeçalho correto. É "melhor esforço": depende
+// de um serviço externo (a URL da imagem é enviada a ele) e pode falhar.
+const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
+
+function tryLoadImage(src) {
   return new Promise((resolve) => {
-    if (!url) {
-      resolve(null);
-      return;
-    }
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null); // CORS ou URL inválida: cai no placeholder
-    img.src = url;
+    img.onerror = () => resolve(null);
+    img.src = src;
   });
+}
+
+async function loadImageForCanvas(url, useProxyFallback) {
+  if (!url) return null;
+
+  const direct = await tryLoadImage(url);
+  if (direct) return direct;
+
+  // data: e blob: já são locais — proxy não ajudaria
+  if (!useProxyFallback || /^(data|blob):/i.test(url)) return null;
+
+  return tryLoadImage(IMAGE_PROXY_BASE + encodeURIComponent(url));
 }
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -1281,7 +1297,7 @@ async function renderRankingImage(options) {
       if (safe) urls.add(safe);
     }));
     await Promise.all([...urls].map(async (url) => {
-      imageCache.set(url, await loadImageForCanvas(url));
+      imageCache.set(url, await loadImageForCanvas(url, options.useImageProxy));
     }));
   }
 
@@ -1373,7 +1389,10 @@ function updateExportImageModalState() {
   const contentMode = document.querySelector('input[name="exportImgContent"]:checked').value;
   exportImgCategorySelect.disabled = contentMode !== 'category';
   exportImgIncludeUnranked.disabled = contentMode === 'category';
+  exportImgUseProxy.disabled = !exportImgIncludeImages.checked;
 }
+
+exportImgIncludeImages.addEventListener('change', updateExportImageModalState);
 
 document.querySelectorAll('input[name="exportImgContent"]').forEach((radio) => {
   radio.addEventListener('change', updateExportImageModalState);
@@ -1402,6 +1421,7 @@ function collectExportImageOptions() {
     category: exportImgCategorySelect.value,
     includeTitle: exportImgIncludeTitle.checked,
     includeImages: exportImgIncludeImages.checked,
+    useImageProxy: exportImgUseProxy.checked,
     includeNotes: exportImgIncludeNotes.checked,
     includeNewBadge: exportImgIncludeNewBadge.checked,
     includeUnranked: exportImgIncludeUnranked.checked,
