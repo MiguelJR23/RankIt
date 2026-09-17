@@ -300,7 +300,7 @@ button:disabled:hover {
     overflow: auto;
 }
 
-.modal-box input:not(#reviewInput),
+.modal-box input:not([type="checkbox"]):not([type="radio"]),
 .modal-box textarea {
     width: 100%;
 }
@@ -395,41 +395,68 @@ button:disabled:hover {
 /* Exportar como imagem — modal de configuração */
 
 .export-image-box {
-    width: min(460px, 100%);
+    width: min(420px, 100%);
+    gap: 10px;
+}
+
+.export-image-box h2 {
+    font-size: 1.25rem;
 }
 
 .export-fieldset {
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 12px;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
 }
 
 .export-fieldset legend {
     color: var(--muted);
-    font-size: .85rem;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
     padding: 0 4px;
 }
 
 .export-fieldset select {
     width: 100%;
-    margin-top: 4px;
+    margin-top: 8px;
+    padding: 8px 10px;
 }
 
 .export-option {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
+    text-align: left;
     gap: 10px;
     cursor: pointer;
     user-select: none;
-    font-size: .95rem;
+    font-size: .92rem;
+    padding: 5px 2px;
 }
 
-.export-option input {
-    width: auto;
+.export-option span {
+    flex: 1;
+}
+
+.export-option input[type="radio"],
+.export-option input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    padding: 0;
     accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.export-suboption {
+    margin-left: 26px;
+    font-size: .8rem;
+    color: var(--muted);
 }
 
 .export-option:has(input:disabled) {
@@ -794,7 +821,7 @@ button:disabled:hover {
 }
 
 @media (max-width: 768px) {
-    /* A antiga barra de topo (busca, Novo, Ferramentas) some por
+    /* A antiga barra de topo (busca, Novo, ☰ Ferramentas) some por
        completo — tudo isso agora vive na toolbar inferior e nas gavetas. */
     .controls {
         display: none;
