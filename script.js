@@ -83,6 +83,25 @@ const mobileImportListBtn = document.getElementById('mobileImportListBtn');
 const mobileExportImagesBtn = document.getElementById('mobileExportImagesBtn');
 const mobileImportImagesBtn = document.getElementById('mobileImportImagesBtn');
 const mobileClearMarkersBtn = document.getElementById('mobileClearMarkersBtn');
+const mobileExportImageBtn = document.getElementById('mobileExportImageBtn');
+
+// Exportar como imagem
+const exportImageBtn = document.getElementById('exportImageBtn');
+const exportImageModalOverlay = document.getElementById('exportImageModalOverlay');
+const exportImgCategorySelect = document.getElementById('exportImgCategorySelect');
+const exportImgIncludeTitle = document.getElementById('exportImgIncludeTitle');
+const exportImgIncludeImages = document.getElementById('exportImgIncludeImages');
+const exportImgIncludeNotes = document.getElementById('exportImgIncludeNotes');
+const exportImgIncludeNewBadge = document.getElementById('exportImgIncludeNewBadge');
+const exportImgIncludeUnranked = document.getElementById('exportImgIncludeUnranked');
+const exportImageError = document.getElementById('exportImageError');
+const exportImageCancelBtn = document.getElementById('exportImageCancelBtn');
+const exportImageGenerateBtn = document.getElementById('exportImageGenerateBtn');
+const exportImageResultOverlay = document.getElementById('exportImageResultOverlay');
+const exportImagePreviewImg = document.getElementById('exportImagePreviewImg');
+const exportImageShareBtn = document.getElementById('exportImageShareBtn');
+const exportImageSaveBtn = document.getElementById('exportImageSaveBtn');
+const exportImageCloseBtn = document.getElementById('exportImageCloseBtn');
 
 titleInput.value = db.title;
 columnsSelect.value = String(db.columns);
@@ -204,10 +223,15 @@ function generateListText(dbObj) {
     lines.push('Não ranqueados:');
     dbObj.unranked.forEach((item) => lines.push(formatTxtItemLine(null, item, 'unranked')));
   }
-  const hasReview = [...dbObj.ranked, ...dbObj.unranked].some((i) => i.review);
-  if (hasReview) {
+  const allItems = [...dbObj.ranked, ...dbObj.unranked];
+  const hasAnyMarker = allItems.some((i) => i.review || i.isNew || i.moveDelta);
+  if (hasAnyMarker) {
     lines.push('');
-    lines.push('Legenda: * = A ser revisado');
+    lines.push('Legenda:');
+    lines.push('* = A revisar');
+    lines.push('! = Novo');
+    lines.push('[+N] = Subiu N posições');
+    lines.push('[-N] = Desceu N posições');
   }
   return lines.join('\n');
 }
@@ -217,17 +241,16 @@ const TXT_SECTION_REGEX = /^n[ãa]o\s+ranqueados?\s*:?\s*$/i;
 const TXT_LEGEND_REGEX = /^legenda/i;
 const TXT_RANKED_LINE_REGEX = /^(\d+)\.\s*(.+)$/;
 const TXT_UNRANKED_LINE_REGEX = /^-\s*(.+)$/;
-const TXT_REST_REGEX = /^(.*?)(?:\s*\(([^()]*)\))?\s*(\*)?\s*(?:!)?\s*(?:\[([+-]\d+)\])?\s*$/;
+const TXT_REST_REGEX = /^(.*?)(?:\s*\(([^()]*)\))?\s*(\*)?\s*(!)?\s*(?:\[([+-]\d+)\])?\s*$/;
 
 function parseTxtRest(rest) {
   const m = rest.match(TXT_REST_REGEX) || [];
-  const moveDelta = m[4] ? parseInt(m[4], 10) : 0;
-  // "isNew" (a faixa "Novo") nunca é atribuído a partir de texto importado —
-  // esse marcador só existe para itens criados pelo botão "Novo".
+  const moveDelta = m[5] ? parseInt(m[5], 10) : 0;
   return {
     name: (m[1] || '').trim(),
     note: m[2] ? m[2].trim() : '',
     review: !!m[3],
+    isNew: !!m[4],
     moveDelta: Number.isFinite(moveDelta) ? moveDelta : 0,
   };
 }
@@ -238,9 +261,14 @@ function parseListText(text) {
   const rankedRaw = [];
   const unranked = [];
   let inUnranked = false;
+  let inLegend = false;
 
   for (const line of lines) {
-    if (TXT_LEGEND_REGEX.test(line)) continue;
+    if (TXT_LEGEND_REGEX.test(line)) {
+      inLegend = true;
+      continue;
+    }
+    if (inLegend) continue; // a legenda ocupa várias linhas agora — ignora todas
     const titleMatch = line.match(TXT_TITLE_REGEX);
     if (titleMatch) {
       title = titleMatch[1].trim();
@@ -307,7 +335,7 @@ async function importListFromClipboard() {
     note: i.note,
     review: i.review,
     moveDelta: i.moveDelta || 0,
-    isNew: false,
+    isNew: !!i.isNew,
   }));
   db.unranked = parsed.unranked.map((i) => ({
     id: generateId(),
@@ -316,7 +344,7 @@ async function importListFromClipboard() {
     note: i.note,
     review: i.review,
     moveDelta: i.moveDelta || 0,
-    isNew: false,
+    isNew: !!i.isNew,
   }));
   if (parsed.title) db.title = parsed.title;
 
@@ -643,6 +671,26 @@ function createCard(item, isRanked, rankNumber, canReorder) {
   return card;
 }
 
+function passesSearch(item, searchTerm) {
+  return item.name.toLowerCase().includes(searchTerm);
+}
+
+function passesFilter(item, isRanked, filterValue) {
+  if (filterValue === 'ranked') return isRanked;
+  if (filterValue === 'unranked') return !isRanked;
+  if (filterValue === 'review') return item.review;
+  return true;
+}
+
+function getCurrentlyFilteredItems() {
+  const search = searchInput.value.trim().toLowerCase();
+  const filter = filterSelect.value;
+  return {
+    ranked: db.ranked.filter((i) => passesSearch(i, search) && passesFilter(i, true, filter)),
+    unranked: db.unranked.filter((i) => passesSearch(i, search) && passesFilter(i, false, filter)),
+  };
+}
+
 function render() {
   save();
   updateStats();
@@ -650,16 +698,8 @@ function render() {
   const search = searchInput.value.trim().toLowerCase();
   const filter = filterSelect.value;
 
-  const passesSearch = (i) => i.name.toLowerCase().includes(search);
-  const passesFilter = (i, isRanked) => {
-    if (filter === 'ranked') return isRanked;
-    if (filter === 'unranked') return !isRanked;
-    if (filter === 'review') return i.review;
-    return true;
-  };
-
-  const filteredRanked = db.ranked.filter((i) => passesSearch(i) && passesFilter(i, true));
-  const filteredUnranked = db.unranked.filter((i) => passesSearch(i) && passesFilter(i, false));
+  const filteredRanked = db.ranked.filter((i) => passesSearch(i, search) && passesFilter(i, true, filter));
+  const filteredUnranked = db.unranked.filter((i) => passesSearch(i, search) && passesFilter(i, false, filter));
 
   // Só libera o arrasto quando a grade mostrada é IDÊNTICA (mesmos itens, mesma
   // ordem) à lista completa. Caso contrário, um drag reordenaria só os cards
@@ -962,6 +1002,7 @@ exportImagesTxtBtn.addEventListener('click', exportImagesTxt);
 importImagesTxtBtn.addEventListener('click', importImagesFromClipboard);
 
 clearMarkersBtn.addEventListener('click', clearAllMarkers);
+exportImageBtn.addEventListener('click', openExportImageModal);
 
 modal.addEventListener('click', (e) => {
   if (e.target === modal) closeModalFn();
@@ -969,7 +1010,488 @@ modal.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModalFn();
+  if (e.key === 'Escape' && !exportImageModalOverlay.classList.contains('hidden')) closeExportImageModal();
+  if (e.key === 'Escape' && !exportImageResultOverlay.classList.contains('hidden')) closeExportImageResultModal();
 });
+
+/* Exportar como imagem */
+
+// A imagem é desenhada a partir dos DADOS do ranking (não é um print da
+// tela) — assim é fácil excluir tudo que é interface de gerenciamento
+// (botões, toolbar, menus) e manter só o conteúdo visual do ranking.
+
+const EXPORT_LAYOUT = {
+  padding: 32,
+  gap: 22,
+  cardWidth: 300,
+  imageHeight: 170,
+  cardPaddingX: 16,
+  cardPaddingTop: 16,
+  cardPaddingBottom: 16,
+  rankLineHeight: 26,
+  moveLineHeight: 22,
+  reviewLineHeight: 24,
+  noteLineHeight: 20,
+  noteMaxLines: 2,
+  sectionLabelHeight: 44,
+  titleHeight: 78,
+  footerHeight: 40,
+};
+
+function computeExportColumns(format, count) {
+  if (count <= 0) return 1;
+  if (format === 'horizontal') return Math.min(6, Math.max(2, Math.ceil(Math.sqrt(count * 2))));
+  if (format === 'vertical') return Math.min(2, count);
+  if (count <= 1) return 1;
+  if (count <= 4) return 2;
+  if (count <= 9) return 3;
+  return 4;
+}
+
+function loadImageForCanvas(url) {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null); // CORS ou URL inválida: cai no placeholder
+    img.src = url;
+  });
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function drawRoundedRectTop(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+}
+
+function drawImageCover(ctx, img, x, y, w, h) {
+  const scale = Math.max(w / img.width, h / img.height);
+  const sw = w / scale;
+  const sh = h / scale;
+  const sx = (img.width - sw) / 2;
+  const sy = (img.height - sh) / 2;
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function truncateCanvasText(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let truncated = text;
+  while (truncated.length > 1 && ctx.measureText(truncated + '…').width > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+  return truncated + '…';
+}
+
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? current + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length === maxLines) break;
+    } else {
+      current = test;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  if (lines.length > maxLines) lines.length = maxLines;
+  const consumedWords = lines.join(' ').split(' ').length;
+  if (consumedWords < words.length && lines.length > 0) {
+    lines[lines.length - 1] = truncateCanvasText(ctx, lines[lines.length - 1] + '…', maxWidth);
+  }
+  return lines;
+}
+
+function buildExportSections(options) {
+  if (options.contentMode === 'category') {
+    const isRankedCategory = options.category !== 'unranked';
+    const items = isRankedCategory ? db.ranked : db.unranked;
+    return [{ label: isRankedCategory ? 'Ranking' : 'Não Ranqueados', items, isRanked: isRankedCategory }];
+  }
+
+  let rankedItems = db.ranked;
+  let unrankedItems = db.unranked;
+  if (options.contentMode === 'filtered') {
+    const filtered = getCurrentlyFilteredItems();
+    rankedItems = filtered.ranked;
+    unrankedItems = filtered.unranked;
+  }
+
+  const sections = [{ label: 'Ranking', items: rankedItems, isRanked: true }];
+  if (options.includeUnranked && unrankedItems.length > 0) {
+    sections.push({ label: 'Não Ranqueados', items: unrankedItems, isRanked: false });
+  }
+  return sections;
+}
+
+function computeCardHeight(L, { includeImages, hasReview, hasNotes, hasMove, hasNewInline }) {
+  let h = L.cardPaddingTop + L.rankLineHeight;
+  if (hasNewInline) h += L.moveLineHeight;
+  if (hasMove) h += L.moveLineHeight;
+  if (hasReview) h += L.reviewLineHeight;
+  if (hasNotes) h += L.noteLineHeight * L.noteMaxLines;
+  if (includeImages) h += L.imageHeight;
+  h += L.cardPaddingBottom;
+  return h;
+}
+
+function drawExportCard(ctx, item, x, y, w, h, sectionFlags, opts) {
+  const L = EXPORT_LAYOUT;
+
+  drawRoundedRect(ctx, x, y, w, h, 14);
+  ctx.fillStyle = '#242424';
+  ctx.fill();
+  drawRoundedRect(ctx, x, y, w, h, 14);
+  ctx.strokeStyle = '#333333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  let cursorY = y;
+
+  if (opts.includeImages) {
+    const safeUrl = safeImageUrl(item.image);
+    const loadedImg = safeUrl ? opts.imageCache.get(safeUrl) : null;
+    ctx.save();
+    drawRoundedRectTop(ctx, x, y, w, L.imageHeight, 14);
+    ctx.clip();
+    if (loadedImg) {
+      drawImageCover(ctx, loadedImg, x, y, w, L.imageHeight);
+    } else {
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(x, y, w, L.imageHeight);
+      ctx.fillStyle = '#555555';
+      ctx.font = 'bold 52px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText((item.name.charAt(0) || '?').toUpperCase(), x + w / 2, y + L.imageHeight / 2 + 4);
+    }
+    ctx.restore();
+    cursorY += L.imageHeight;
+  }
+
+  if (opts.includeImages && opts.includeNewBadge && item.isNew) {
+    ctx.font = 'bold 14px Arial, sans-serif';
+    const label = 'Novo';
+    const badgeW = ctx.measureText(label).width + 20;
+    const badgeH = 26;
+    const badgeX = x + w - badgeW - 10;
+    const badgeY = y + 10;
+    drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 6);
+    ctx.fillStyle = '#facc15';
+    ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+
+  cursorY += L.cardPaddingTop;
+  const textX = x + L.cardPaddingX;
+  const textMaxWidth = w - L.cardPaddingX * 2;
+
+  cursorY += L.rankLineHeight * 0.72;
+  ctx.font = '600 17px Arial, sans-serif';
+  ctx.fillStyle = '#60a5fa';
+  const rankLine = opts.rankNumber ? opts.rankNumber + '. ' + item.name : '— ' + item.name;
+  ctx.fillText(truncateCanvasText(ctx, rankLine, textMaxWidth), textX, cursorY);
+  cursorY += L.rankLineHeight * 0.28;
+
+  if (sectionFlags.hasNewInline) {
+    cursorY += L.moveLineHeight * 0.7;
+    if (opts.includeNewBadge && item.isNew) {
+      ctx.font = 'bold 13px Arial, sans-serif';
+      ctx.fillStyle = '#facc15';
+      ctx.fillText('● Novo', textX, cursorY);
+    }
+    cursorY += L.moveLineHeight * 0.3;
+  }
+
+  if (sectionFlags.hasMove) {
+    cursorY += L.moveLineHeight * 0.7;
+    if (item.moveDelta) {
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.fillStyle = item.moveDelta > 0 ? '#4ade80' : '#f87171';
+      const sign = item.moveDelta > 0 ? '+' : '';
+      ctx.fillText('[' + sign + item.moveDelta + ']', textX, cursorY);
+    }
+    cursorY += L.moveLineHeight * 0.3;
+  }
+
+  if (sectionFlags.hasReview) {
+    cursorY += L.reviewLineHeight * 0.7;
+    if (item.review) {
+      ctx.font = 'bold 14px Arial, sans-serif';
+      ctx.fillStyle = '#facc15';
+      ctx.fillText('★ A revisar', textX, cursorY);
+    }
+    cursorY += L.reviewLineHeight * 0.3;
+  }
+
+  if (sectionFlags.hasNotes && opts.includeNotes && item.note) {
+    ctx.font = '14px Arial, sans-serif';
+    ctx.fillStyle = '#cccccc';
+    const lines = wrapCanvasText(ctx, item.note, textMaxWidth, L.noteMaxLines);
+    lines.forEach((line) => {
+      cursorY += L.noteLineHeight * 0.7;
+      ctx.fillText(line, textX, cursorY);
+      cursorY += L.noteLineHeight * 0.3;
+    });
+  }
+}
+
+async function renderRankingImage(options) {
+  const L = EXPORT_LAYOUT;
+  const sections = buildExportSections(options).filter((s) => s.items.length > 0);
+
+  if (sections.length === 0) {
+    throw new Error('Não há itens para exportar com essas opções.');
+  }
+
+  const imageCache = new Map();
+  if (options.includeImages) {
+    const urls = new Set();
+    sections.forEach((s) => s.items.forEach((item) => {
+      const safe = safeImageUrl(item.image);
+      if (safe) urls.add(safe);
+    }));
+    await Promise.all([...urls].map(async (url) => {
+      imageCache.set(url, await loadImageForCanvas(url));
+    }));
+  }
+
+  const sectionLayouts = sections.map((section) => {
+    const cols = computeExportColumns(options.format, section.items.length);
+    const rows = Math.ceil(section.items.length / cols);
+    const sectionFlags = {
+      hasNotes: options.includeNotes && section.items.some((i) => i.note),
+      hasReview: section.items.some((i) => i.review),
+      hasMove: section.items.some((i) => i.moveDelta),
+      hasNewInline: !options.includeImages && options.includeNewBadge && section.items.some((i) => i.isNew),
+    };
+    const cardH = computeCardHeight(L, { includeImages: options.includeImages, ...sectionFlags });
+    return { section, cols, rows, cardH, sectionFlags };
+  });
+
+  const maxCols = Math.max(...sectionLayouts.map((s) => s.cols), 1);
+  const width = L.padding * 2 + maxCols * L.cardWidth + (maxCols - 1) * L.gap;
+
+  const titleH = options.includeTitle && db.title ? L.titleHeight : 0;
+  let height = L.padding + titleH;
+  sectionLayouts.forEach((layout, i) => {
+    if (i > 0) height += L.gap;
+    height += L.sectionLabelHeight + layout.rows * layout.cardH + (layout.rows - 1) * L.gap;
+  });
+  height += L.footerHeight + L.padding;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#181818';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  let y = L.padding;
+
+  if (options.includeTitle && db.title) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 34px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(truncateCanvasText(ctx, db.title, width - L.padding * 2), L.padding, y + 40);
+    y += titleH;
+  }
+
+  sectionLayouts.forEach(({ section, cols, cardH, sectionFlags }, sectionIdx) => {
+    if (sectionIdx > 0) y += L.gap;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(section.label.toUpperCase(), L.padding, y + 24);
+    y += L.sectionLabelHeight;
+
+    section.items.forEach((item, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = L.padding + col * (L.cardWidth + L.gap);
+      const cardY = y + row * (cardH + L.gap);
+      drawExportCard(ctx, item, x, cardY, L.cardWidth, cardH, sectionFlags, {
+        rankNumber: section.isRanked ? idx + 1 : null,
+        includeImages: options.includeImages,
+        includeNotes: options.includeNotes,
+        includeNewBadge: options.includeNewBadge,
+        imageCache,
+      });
+    });
+
+    const rows = Math.ceil(section.items.length / cols);
+    y += rows * cardH + (rows - 1) * L.gap;
+  });
+
+  ctx.fillStyle = '#555555';
+  ctx.font = '13px Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Gerado com RankIt', canvas.width - L.padding, canvas.height - L.padding + 10);
+
+  return canvas;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+/* Modal: configurar exportação como imagem */
+
+function updateExportImageModalState() {
+  const contentMode = document.querySelector('input[name="exportImgContent"]:checked').value;
+  exportImgCategorySelect.disabled = contentMode !== 'category';
+  exportImgIncludeUnranked.disabled = contentMode === 'category';
+}
+
+document.querySelectorAll('input[name="exportImgContent"]').forEach((radio) => {
+  radio.addEventListener('change', updateExportImageModalState);
+});
+
+function openExportImageModal() {
+  updateExportImageModalState();
+  exportImageError.hidden = true;
+  exportImageModalOverlay.classList.remove('hidden');
+  exportImageModalOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeExportImageModal() {
+  exportImageModalOverlay.classList.add('hidden');
+  exportImageModalOverlay.setAttribute('aria-hidden', 'true');
+}
+
+exportImageModalOverlay.addEventListener('click', (e) => {
+  if (e.target === exportImageModalOverlay) closeExportImageModal();
+});
+exportImageCancelBtn.addEventListener('click', closeExportImageModal);
+
+function collectExportImageOptions() {
+  return {
+    contentMode: document.querySelector('input[name="exportImgContent"]:checked').value,
+    category: exportImgCategorySelect.value,
+    includeTitle: exportImgIncludeTitle.checked,
+    includeImages: exportImgIncludeImages.checked,
+    includeNotes: exportImgIncludeNotes.checked,
+    includeNewBadge: exportImgIncludeNewBadge.checked,
+    includeUnranked: exportImgIncludeUnranked.checked,
+    format: document.querySelector('input[name="exportImgFormat"]:checked').value,
+  };
+}
+
+let lastExportImageBlobUrl = null;
+
+exportImageGenerateBtn.addEventListener('click', async () => {
+  exportImageError.hidden = true;
+  const options = collectExportImageOptions();
+
+  exportImageGenerateBtn.disabled = true;
+  exportImageGenerateBtn.textContent = 'Gerando…';
+  try {
+    const canvas = await renderRankingImage(options);
+    const blob = await canvasToBlob(canvas);
+    if (!blob) throw new Error('Não foi possível gerar a imagem.');
+
+    if (lastExportImageBlobUrl) URL.revokeObjectURL(lastExportImageBlobUrl);
+    lastExportImageBlobUrl = URL.createObjectURL(blob);
+    exportImagePreviewImg.src = lastExportImageBlobUrl;
+
+    closeExportImageModal();
+    openExportImageResultModal();
+  } catch (err) {
+    exportImageError.textContent = err.message || 'Não foi possível gerar a imagem. Tente outras opções.';
+    exportImageError.hidden = false;
+  } finally {
+    exportImageGenerateBtn.disabled = false;
+    exportImageGenerateBtn.textContent = 'Gerar imagem';
+  }
+});
+
+/* Modal: resultado da exportação como imagem */
+
+function openExportImageResultModal() {
+  const canShareFiles = !!(navigator.canShare && navigator.share);
+  exportImageShareBtn.hidden = !canShareFiles;
+  exportImageResultOverlay.classList.remove('hidden');
+  exportImageResultOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeExportImageResultModal() {
+  exportImageResultOverlay.classList.add('hidden');
+  exportImageResultOverlay.setAttribute('aria-hidden', 'true');
+}
+
+exportImageResultOverlay.addEventListener('click', (e) => {
+  if (e.target === exportImageResultOverlay) closeExportImageResultModal();
+});
+exportImageCloseBtn.addEventListener('click', closeExportImageResultModal);
+
+exportImageSaveBtn.addEventListener('click', () => {
+  if (!lastExportImageBlobUrl) return;
+  const a = document.createElement('a');
+  a.href = lastExportImageBlobUrl;
+  a.download = safeFileNameFromTitle() + '.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+exportImageShareBtn.addEventListener('click', async () => {
+  if (!lastExportImageBlobUrl) return;
+  try {
+    const response = await fetch(lastExportImageBlobUrl);
+    const blob = await response.blob();
+    const file = new File([blob], safeFileNameFromTitle() + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: db.title || 'RankIt' });
+    } else {
+      alert('Compartilhamento de imagem não é suportado neste navegador. Use "Salvar imagem".');
+    }
+  } catch (err) {
+    if (err && err.name !== 'AbortError') {
+      alert('Não foi possível compartilhar a imagem. Use "Salvar imagem".');
+    }
+  }
+});
+
+function safeFileNameFromTitle() {
+  return (
+    (db.title || 'ranking')
+      .trim()
+      .replace(/[^\p{L}\p{N}\-_ ]/gu, '')
+      .replace(/\s+/g, '-') || 'ranking'
+  );
+}
 
 /* Interface mobile: toolbar inferior, busca, gavetas */
 
@@ -1066,6 +1588,10 @@ mobileImportImagesBtn.addEventListener('click', () => {
 mobileClearMarkersBtn.addEventListener('click', () => {
   closeMoreSheet();
   clearAllMarkers();
+});
+mobileExportImageBtn.addEventListener('click', () => {
+  closeMoreSheet();
+  openExportImageModal();
 });
 
 // Esc fecha o que estiver aberto (busca ou qualquer uma das gavetas)
