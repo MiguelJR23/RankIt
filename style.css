@@ -82,6 +82,12 @@ select {
     font-family: inherit;
 }
 
+input:disabled,
+select:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
 button {
     background: var(--accent);
     border: none;
@@ -384,6 +390,76 @@ button:disabled:hover {
 
 #confirmOkBtn.danger-btn {
     background: var(--danger);
+}
+
+/* Exportar como imagem — modal de configuração */
+
+.export-image-box {
+    width: min(460px, 100%);
+}
+
+.export-fieldset {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.export-fieldset legend {
+    color: var(--muted);
+    font-size: .85rem;
+    padding: 0 4px;
+}
+
+.export-fieldset select {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: .95rem;
+}
+
+.export-option input {
+    width: auto;
+    accent-color: var(--accent);
+}
+
+.export-option:has(input:disabled) {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Exportar como imagem — modal de resultado */
+
+.export-image-preview {
+    background: #111;
+    border-radius: 10px;
+    max-height: 50vh;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+}
+
+.export-image-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.export-image-result-actions {
+    flex-wrap: wrap;
+}
+
+#exportImageShareBtn {
+    order: -1;
 }
 
 /* Responsividade */
@@ -718,7 +794,7 @@ button:disabled:hover {
 }
 
 @media (max-width: 768px) {
-    /* A antiga barra de topo (busca, Novo, ☰ Ferramentas) some por
+    /* A antiga barra de topo (busca, Novo, Ferramentas) some por
        completo — tudo isso agora vive na toolbar inferior e nas gavetas. */
     .controls {
         display: none;
