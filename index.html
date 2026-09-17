@@ -39,6 +39,7 @@
         <button id="exportImagesTxtBtn" type="button">Exportar Imagens</button>
         <button id="importImagesTxtBtn" type="button">Importar Imagens</button>
         <button id="clearMarkersBtn" type="button">Limpar marcações [+/-] e Novo</button>
+        <button id="exportImageBtn" type="button">Exportar como imagem</button>
         </div>
         </div>
     </header>
@@ -84,6 +85,62 @@
             <div class="modal-actions">
                 <button id="confirmCancelBtn" type="button">Cancelar</button>
                 <button id="confirmOkBtn" type="button">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: configurar exportação como imagem -->
+    <div id="exportImageModalOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportImageModalTitle" aria-hidden="true">
+        <div class="modal-box export-image-box">
+            <h2 id="exportImageModalTitle">Exportar como imagem</h2>
+
+            <fieldset class="export-fieldset">
+                <legend>Conteúdo</legend>
+                <label class="export-option"><input type="radio" name="exportImgContent" value="all" checked><span>Ranking completo</span></label>
+                <label class="export-option"><input type="radio" name="exportImgContent" value="filtered"><span>Apenas itens filtrados</span></label>
+                <label class="export-option"><input type="radio" name="exportImgContent" value="category"><span>Apenas uma categoria</span></label>
+                <select id="exportImgCategorySelect" aria-label="Categoria a exportar" disabled>
+                    <option value="ranked">Ranqueados</option>
+                    <option value="unranked">Não ranqueados</option>
+                </select>
+            </fieldset>
+
+            <fieldset class="export-fieldset">
+                <legend>Informações</legend>
+                <label class="export-option"><input type="checkbox" id="exportImgIncludeTitle" checked><span>Título</span></label>
+                <label class="export-option"><input type="checkbox" id="exportImgIncludeImages" checked><span>Imagens</span></label>
+                <label class="export-option"><input type="checkbox" id="exportImgIncludeNotes" checked><span>Notas</span></label>
+                <label class="export-option"><input type="checkbox" id="exportImgIncludeNewBadge" checked><span>Indicador "Novo"</span></label>
+                <label class="export-option"><input type="checkbox" id="exportImgIncludeUnranked" checked><span>Itens não ranqueados</span></label>
+            </fieldset>
+
+            <fieldset class="export-fieldset">
+                <legend>Formato</legend>
+                <label class="export-option"><input type="radio" name="exportImgFormat" value="auto" checked><span>Automático</span></label>
+                <label class="export-option"><input type="radio" name="exportImgFormat" value="horizontal"><span>Horizontal</span></label>
+                <label class="export-option"><input type="radio" name="exportImgFormat" value="vertical"><span>Vertical</span></label>
+            </fieldset>
+
+            <p id="exportImageError" class="form-error" hidden></p>
+
+            <div class="modal-actions">
+                <button id="exportImageCancelBtn" type="button">Cancelar</button>
+                <button id="exportImageGenerateBtn" type="button">Gerar imagem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: resultado da exportação como imagem -->
+    <div id="exportImageResultOverlay" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportImageResultTitle" aria-hidden="true">
+        <div class="modal-box export-image-box">
+            <h2 id="exportImageResultTitle">Imagem pronta!</h2>
+            <div class="export-image-preview">
+                <img id="exportImagePreviewImg" alt="Pré-visualização do ranking exportado">
+            </div>
+            <div class="modal-actions export-image-result-actions">
+                <button id="exportImageShareBtn" type="button">Compartilhar</button>
+                <button id="exportImageSaveBtn" type="button">Salvar imagem</button>
+                <button id="exportImageCloseBtn" type="button">Fechar</button>
             </div>
         </div>
     </div>
@@ -158,6 +215,12 @@
                     <button id="mobileClearMarkersBtn" type="button" class="sheet-menu-item">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8l-6-6a2 2 0 0 1 0-3l10-10a2 2 0 0 1 3 0l6 6a2 2 0 0 1 0 3L11 20"></path><line x1="8" y1="20" x2="14.5" y2="13.5"></line></svg>
                         <span>Limpar marcações</span>
+                    </button>
+                </li>
+                <li>
+                    <button id="mobileExportImageBtn" type="button" class="sheet-menu-item">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                        <span>Exportar como imagem</span>
                     </button>
                 </li>
             </ul>
