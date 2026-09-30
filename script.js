@@ -100,6 +100,7 @@ const exportImageCancelBtn = document.getElementById('exportImageCancelBtn');
 const exportImageGenerateBtn = document.getElementById('exportImageGenerateBtn');
 const exportImageResultOverlay = document.getElementById('exportImageResultOverlay');
 const exportImagePreviewImg = document.getElementById('exportImagePreviewImg');
+<<<<<<< HEAD
 const exportImagePagerNav = document.getElementById('exportImagePagerNav');
 const exportImagePagerLabel = document.getElementById('exportImagePagerLabel');
 const exportImagePrevPageBtn = document.getElementById('exportImagePrevPageBtn');
@@ -107,6 +108,10 @@ const exportImageNextPageBtn = document.getElementById('exportImageNextPageBtn')
 const exportImageShareBtn = document.getElementById('exportImageShareBtn');
 const exportImageSaveBtn = document.getElementById('exportImageSaveBtn');
 const exportImageSaveAllBtn = document.getElementById('exportImageSaveAllBtn');
+=======
+const exportImageShareBtn = document.getElementById('exportImageShareBtn');
+const exportImageSaveBtn = document.getElementById('exportImageSaveBtn');
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 const exportImageCloseBtn = document.getElementById('exportImageCloseBtn');
 
 titleInput.value = db.title;
@@ -1022,6 +1027,7 @@ document.addEventListener('keydown', (e) => {
 
 /* Exportar como imagem */
 
+<<<<<<< HEAD
 // A imagem é desenhada a partir dos daods do ranking (não é um print da
 // tela) — assim é fácil excluir tudo que é interface de gerenciamento
 // (botões, toolbar, menus) e manter só o conteúdo visual do ranking.
@@ -1181,6 +1187,38 @@ function planSectionPages(section, style, options, extraHeight) {
   }
 
   return { chunks, sectionFlags, cardH };
+=======
+// A imagem é desenhada a partir dos DADOS do ranking (não é um print da
+// tela) — assim é fácil excluir tudo que é interface de gerenciamento
+// (botões, toolbar, menus) e manter só o conteúdo visual do ranking.
+
+const EXPORT_LAYOUT = {
+  padding: 32,
+  gap: 22,
+  cardWidth: 300,
+  imageHeight: 170,
+  cardPaddingX: 16,
+  cardPaddingTop: 16,
+  cardPaddingBottom: 16,
+  rankLineHeight: 26,
+  moveLineHeight: 22,
+  reviewLineHeight: 24,
+  noteLineHeight: 20,
+  noteMaxLines: 2,
+  sectionLabelHeight: 44,
+  titleHeight: 78,
+  footerHeight: 40,
+};
+
+function computeExportColumns(format, count) {
+  if (count <= 0) return 1;
+  if (format === 'horizontal') return Math.min(6, Math.max(2, Math.ceil(Math.sqrt(count * 2))));
+  if (format === 'vertical') return Math.min(2, count);
+  if (count <= 1) return 1;
+  if (count <= 4) return 2;
+  if (count <= 9) return 3;
+  return 4;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 }
 
 // Muitos hosts de imagem não enviam cabeçalho CORS, e sem ele o navegador
@@ -1275,12 +1313,51 @@ function wrapCanvasText(ctx, text, maxWidth, maxLines) {
   return lines;
 }
 
+<<<<<<< HEAD
 function drawExportUnit(style, S, ctx, item, x, y, w, h, sectionFlags, opts) {
   if (style === 'compact') return drawCompactRow(S, ctx, item, x, y, w, h, sectionFlags, opts);
   return drawCardStyle(S, ctx, item, x, y, w, h, sectionFlags, opts);
 }
 
 function drawCardStyle(S, ctx, item, x, y, w, h, sectionFlags, opts) {
+=======
+function buildExportSections(options) {
+  if (options.contentMode === 'category') {
+    const isRankedCategory = options.category !== 'unranked';
+    const items = isRankedCategory ? db.ranked : db.unranked;
+    return [{ label: isRankedCategory ? 'Ranking' : 'Não Ranqueados', items, isRanked: isRankedCategory }];
+  }
+
+  let rankedItems = db.ranked;
+  let unrankedItems = db.unranked;
+  if (options.contentMode === 'filtered') {
+    const filtered = getCurrentlyFilteredItems();
+    rankedItems = filtered.ranked;
+    unrankedItems = filtered.unranked;
+  }
+
+  const sections = [{ label: 'Ranking', items: rankedItems, isRanked: true }];
+  if (options.includeUnranked && unrankedItems.length > 0) {
+    sections.push({ label: 'Não Ranqueados', items: unrankedItems, isRanked: false });
+  }
+  return sections;
+}
+
+function computeCardHeight(L, { includeImages, hasReview, hasNotes, hasMove, hasNewInline }) {
+  let h = L.cardPaddingTop + L.rankLineHeight;
+  if (hasNewInline) h += L.moveLineHeight;
+  if (hasMove) h += L.moveLineHeight;
+  if (hasReview) h += L.reviewLineHeight;
+  if (hasNotes) h += L.noteLineHeight * L.noteMaxLines;
+  if (includeImages) h += L.imageHeight;
+  h += L.cardPaddingBottom;
+  return h;
+}
+
+function drawExportCard(ctx, item, x, y, w, h, sectionFlags, opts) {
+  const L = EXPORT_LAYOUT;
+
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   drawRoundedRect(ctx, x, y, w, h, 14);
   ctx.fillStyle = '#242424';
   ctx.fill();
@@ -1295,6 +1372,7 @@ function drawCardStyle(S, ctx, item, x, y, w, h, sectionFlags, opts) {
     const safeUrl = safeImageUrl(item.image);
     const loadedImg = safeUrl ? opts.imageCache.get(safeUrl) : null;
     ctx.save();
+<<<<<<< HEAD
     drawRoundedRectTop(ctx, x, y, w, S.imageHeight, 14);
     ctx.clip();
     if (loadedImg) {
@@ -1302,14 +1380,30 @@ function drawCardStyle(S, ctx, item, x, y, w, h, sectionFlags, opts) {
     } else {
       ctx.fillStyle = '#111111';
       ctx.fillRect(x, y, w, S.imageHeight);
+=======
+    drawRoundedRectTop(ctx, x, y, w, L.imageHeight, 14);
+    ctx.clip();
+    if (loadedImg) {
+      drawImageCover(ctx, loadedImg, x, y, w, L.imageHeight);
+    } else {
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(x, y, w, L.imageHeight);
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
       ctx.fillStyle = '#555555';
       ctx.font = 'bold 52px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+<<<<<<< HEAD
       ctx.fillText((item.name.charAt(0) || '?').toUpperCase(), x + w / 2, y + S.imageHeight / 2 + 4);
     }
     ctx.restore();
     cursorY += S.imageHeight;
+=======
+      ctx.fillText((item.name.charAt(0) || '?').toUpperCase(), x + w / 2, y + L.imageHeight / 2 + 4);
+    }
+    ctx.restore();
+    cursorY += L.imageHeight;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   }
 
   if (opts.includeImages && opts.includeNewBadge && item.isNew) {
@@ -1331,60 +1425,104 @@ function drawCardStyle(S, ctx, item, x, y, w, h, sectionFlags, opts) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
 
+<<<<<<< HEAD
   cursorY += S.cardPaddingTop;
   const textX = x + S.cardPaddingX;
   const textMaxWidth = w - S.cardPaddingX * 2;
 
   cursorY += S.rankLineHeight * 0.72;
+=======
+  cursorY += L.cardPaddingTop;
+  const textX = x + L.cardPaddingX;
+  const textMaxWidth = w - L.cardPaddingX * 2;
+
+  cursorY += L.rankLineHeight * 0.72;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   ctx.font = '600 17px Arial, sans-serif';
   ctx.fillStyle = '#60a5fa';
   const rankLine = opts.rankNumber ? opts.rankNumber + '. ' + item.name : '— ' + item.name;
   ctx.fillText(truncateCanvasText(ctx, rankLine, textMaxWidth), textX, cursorY);
+<<<<<<< HEAD
   cursorY += S.rankLineHeight * 0.28;
 
   if (sectionFlags.hasNewInline) {
     cursorY += S.moveLineHeight * 0.7;
+=======
+  cursorY += L.rankLineHeight * 0.28;
+
+  if (sectionFlags.hasNewInline) {
+    cursorY += L.moveLineHeight * 0.7;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     if (opts.includeNewBadge && item.isNew) {
       ctx.font = 'bold 13px Arial, sans-serif';
       ctx.fillStyle = '#facc15';
       ctx.fillText('● Novo', textX, cursorY);
     }
+<<<<<<< HEAD
     cursorY += S.moveLineHeight * 0.3;
   }
 
   if (sectionFlags.hasMove) {
     cursorY += S.moveLineHeight * 0.7;
+=======
+    cursorY += L.moveLineHeight * 0.3;
+  }
+
+  if (sectionFlags.hasMove) {
+    cursorY += L.moveLineHeight * 0.7;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     if (item.moveDelta) {
       ctx.font = 'bold 14px Arial, sans-serif';
       ctx.fillStyle = item.moveDelta > 0 ? '#4ade80' : '#f87171';
       const sign = item.moveDelta > 0 ? '+' : '';
       ctx.fillText('[' + sign + item.moveDelta + ']', textX, cursorY);
     }
+<<<<<<< HEAD
     cursorY += S.moveLineHeight * 0.3;
   }
 
   if (sectionFlags.hasReview) {
     cursorY += S.reviewLineHeight * 0.7;
+=======
+    cursorY += L.moveLineHeight * 0.3;
+  }
+
+  if (sectionFlags.hasReview) {
+    cursorY += L.reviewLineHeight * 0.7;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     if (item.review) {
       ctx.font = 'bold 14px Arial, sans-serif';
       ctx.fillStyle = '#facc15';
       ctx.fillText('★ A revisar', textX, cursorY);
     }
+<<<<<<< HEAD
     cursorY += S.reviewLineHeight * 0.3;
+=======
+    cursorY += L.reviewLineHeight * 0.3;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   }
 
   if (sectionFlags.hasNotes && opts.includeNotes && item.note) {
     ctx.font = '14px Arial, sans-serif';
     ctx.fillStyle = '#cccccc';
+<<<<<<< HEAD
     const lines = wrapCanvasText(ctx, item.note, textMaxWidth, S.noteMaxLines);
     lines.forEach((line) => {
       cursorY += S.noteLineHeight * 0.7;
       ctx.fillText(line, textX, cursorY);
       cursorY += S.noteLineHeight * 0.3;
+=======
+    const lines = wrapCanvasText(ctx, item.note, textMaxWidth, L.noteMaxLines);
+    lines.forEach((line) => {
+      cursorY += L.noteLineHeight * 0.7;
+      ctx.fillText(line, textX, cursorY);
+      cursorY += L.noteLineHeight * 0.3;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     });
   }
 }
 
+<<<<<<< HEAD
 function drawCompactRow(S, ctx, item, x, y, w, h, sectionFlags, opts) {
   drawRoundedRect(ctx, x, y, w, h, 10);
   ctx.fillStyle = '#242424';
@@ -1488,6 +1626,9 @@ function drawCompactRow(S, ctx, item, x, y, w, h, sectionFlags, opts) {
 async function renderRankingImages(options) {
   const style = options.style || 'cards';
   const S = EXPORT_STYLES[style];
+=======
+async function renderRankingImage(options) {
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   const L = EXPORT_LAYOUT;
   const sections = buildExportSections(options).filter((s) => s.items.length > 0);
 
@@ -1495,6 +1636,7 @@ async function renderRankingImages(options) {
     throw new Error('Não há itens para exportar com essas opções.');
   }
 
+<<<<<<< HEAD
   const extraHeight = computeExtraHeight(options);
   const targetRatio = EXPORT_TARGET_RATIO[options.format] || EXPORT_TARGET_RATIO.auto;
 
@@ -1509,6 +1651,12 @@ async function renderRankingImages(options) {
   if (options.includeImages) {
     const urls = new Set();
     sectionPlans.forEach((p) => p.section.items.forEach((item) => {
+=======
+  const imageCache = new Map();
+  if (options.includeImages) {
+    const urls = new Set();
+    sections.forEach((s) => s.items.forEach((item) => {
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
       const safe = safeImageUrl(item.image);
       if (safe) urls.add(safe);
     }));
@@ -1517,6 +1665,7 @@ async function renderRankingImages(options) {
     }));
   }
 
+<<<<<<< HEAD
   const canvases = [];
   let pageCounter = 0;
 
@@ -1596,6 +1745,90 @@ function canvasToBlob(canvas, mimeType, quality) {
 }
 
 
+=======
+  const sectionLayouts = sections.map((section) => {
+    const cols = computeExportColumns(options.format, section.items.length);
+    const rows = Math.ceil(section.items.length / cols);
+    const sectionFlags = {
+      hasNotes: options.includeNotes && section.items.some((i) => i.note),
+      hasReview: section.items.some((i) => i.review),
+      hasMove: section.items.some((i) => i.moveDelta),
+      hasNewInline: !options.includeImages && options.includeNewBadge && section.items.some((i) => i.isNew),
+    };
+    const cardH = computeCardHeight(L, { includeImages: options.includeImages, ...sectionFlags });
+    return { section, cols, rows, cardH, sectionFlags };
+  });
+
+  const maxCols = Math.max(...sectionLayouts.map((s) => s.cols), 1);
+  const width = L.padding * 2 + maxCols * L.cardWidth + (maxCols - 1) * L.gap;
+
+  const titleH = options.includeTitle && db.title ? L.titleHeight : 0;
+  let height = L.padding + titleH;
+  sectionLayouts.forEach((layout, i) => {
+    if (i > 0) height += L.gap;
+    height += L.sectionLabelHeight + layout.rows * layout.cardH + (layout.rows - 1) * L.gap;
+  });
+  height += L.footerHeight + L.padding;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#181818';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  let y = L.padding;
+
+  if (options.includeTitle && db.title) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 34px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(truncateCanvasText(ctx, db.title, width - L.padding * 2), L.padding, y + 40);
+    y += titleH;
+  }
+
+  sectionLayouts.forEach(({ section, cols, cardH, sectionFlags }, sectionIdx) => {
+    if (sectionIdx > 0) y += L.gap;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(section.label.toUpperCase(), L.padding, y + 24);
+    y += L.sectionLabelHeight;
+
+    section.items.forEach((item, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = L.padding + col * (L.cardWidth + L.gap);
+      const cardY = y + row * (cardH + L.gap);
+      drawExportCard(ctx, item, x, cardY, L.cardWidth, cardH, sectionFlags, {
+        rankNumber: section.isRanked ? idx + 1 : null,
+        includeImages: options.includeImages,
+        includeNotes: options.includeNotes,
+        includeNewBadge: options.includeNewBadge,
+        imageCache,
+      });
+    });
+
+    const rows = Math.ceil(section.items.length / cols);
+    y += rows * cardH + (rows - 1) * L.gap;
+  });
+
+  ctx.fillStyle = '#555555';
+  ctx.font = '13px Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Gerado com RankIt', canvas.width - L.padding, canvas.height - L.padding + 10);
+
+  return canvas;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 /* Modal: configurar exportação como imagem */
 
 function updateExportImageModalState() {
@@ -1639,6 +1872,7 @@ function collectExportImageOptions() {
     includeNewBadge: exportImgIncludeNewBadge.checked,
     includeUnranked: exportImgIncludeUnranked.checked,
     format: document.querySelector('input[name="exportImgFormat"]:checked').value,
+<<<<<<< HEAD
     style: document.querySelector('input[name="exportImgStyle"]:checked').value,
     itemsPerImage: document.querySelector('input[name="exportImgItemsPerImage"]:checked').value,
   };
@@ -1646,6 +1880,12 @@ function collectExportImageOptions() {
 
 let exportImagePages = []; // [{ blob, url }], na ordem de exibição
 let exportImagePageIndex = 0;
+=======
+  };
+}
+
+let lastExportImageBlobUrl = null;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 
 exportImageGenerateBtn.addEventListener('click', async () => {
   exportImageError.hidden = true;
@@ -1654,6 +1894,7 @@ exportImageGenerateBtn.addEventListener('click', async () => {
   exportImageGenerateBtn.disabled = true;
   exportImageGenerateBtn.textContent = 'Gerando…';
   try {
+<<<<<<< HEAD
     const canvases = await renderRankingImages(options);
     // Fotos se beneficiam de JPEG (arquivo bem menor, o que ajuda o app de
     // destino a não recomprimir tanto); sem imagens, PNG mantém texto nítido.
@@ -1666,6 +1907,15 @@ exportImageGenerateBtn.addEventListener('click', async () => {
     exportImagePages.forEach((p) => URL.revokeObjectURL(p.url));
     exportImagePages = blobs.map((blob) => ({ blob, url: URL.createObjectURL(blob) }));
     exportImagePageIndex = 0;
+=======
+    const canvas = await renderRankingImage(options);
+    const blob = await canvasToBlob(canvas);
+    if (!blob) throw new Error('Não foi possível gerar a imagem.');
+
+    if (lastExportImageBlobUrl) URL.revokeObjectURL(lastExportImageBlobUrl);
+    lastExportImageBlobUrl = URL.createObjectURL(blob);
+    exportImagePreviewImg.src = lastExportImageBlobUrl;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 
     closeExportImageModal();
     openExportImageResultModal();
@@ -1680,6 +1930,7 @@ exportImageGenerateBtn.addEventListener('click', async () => {
 
 /* Modal: resultado da exportação como imagem */
 
+<<<<<<< HEAD
 function exportImageFileExtension() {
   return exportImagePages[0] && exportImagePages[0].blob.type === 'image/jpeg' ? '.jpg' : '.png';
 }
@@ -1711,6 +1962,11 @@ function openExportImageResultModal() {
   const canShareFiles = !!(navigator.canShare && navigator.share);
   exportImageShareBtn.hidden = !canShareFiles;
   renderExportImagePager();
+=======
+function openExportImageResultModal() {
+  const canShareFiles = !!(navigator.canShare && navigator.share);
+  exportImageShareBtn.hidden = !canShareFiles;
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
   exportImageResultOverlay.classList.remove('hidden');
   exportImageResultOverlay.setAttribute('aria-hidden', 'false');
 }
@@ -1725,6 +1981,7 @@ exportImageResultOverlay.addEventListener('click', (e) => {
 });
 exportImageCloseBtn.addEventListener('click', closeExportImageResultModal);
 
+<<<<<<< HEAD
 function downloadBlobUrl(url, filename) {
   const a = document.createElement('a');
   a.href = url;
@@ -1758,6 +2015,26 @@ exportImageShareBtn.addEventListener('click', async () => {
     });
     if (navigator.canShare && navigator.canShare({ files })) {
       await navigator.share({ files, title: db.title || 'RankIt' });
+=======
+exportImageSaveBtn.addEventListener('click', () => {
+  if (!lastExportImageBlobUrl) return;
+  const a = document.createElement('a');
+  a.href = lastExportImageBlobUrl;
+  a.download = safeFileNameFromTitle() + '.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+exportImageShareBtn.addEventListener('click', async () => {
+  if (!lastExportImageBlobUrl) return;
+  try {
+    const response = await fetch(lastExportImageBlobUrl);
+    const blob = await response.blob();
+    const file = new File([blob], safeFileNameFromTitle() + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: db.title || 'RankIt' });
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     } else {
       alert('Compartilhamento de imagem não é suportado neste navegador. Use "Salvar imagem".');
     }

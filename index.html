@@ -77,7 +77,11 @@
     </div>
 
     <!-- Modal de confirmação genérico (usado por excluir, exportar, importar e
+<<<<<<< HEAD
          limpar marcações — tanto no mobile quanto desktop). -->
+=======
+         limpar marcações — tanto no mobile quanto no desktop). -->
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
     <div id="confirmModalOverlay" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage" aria-hidden="true">
         <div class="modal-box confirm-box">
             <h2 id="confirmTitle">Confirmar?</h2>
@@ -122,6 +126,7 @@
                 <label class="export-option"><input type="radio" name="exportImgFormat" value="vertical"><span>Vertical</span></label>
             </fieldset>
 
+<<<<<<< HEAD
             <fieldset class="export-fieldset">
                 <legend>Estilo</legend>
                 <label class="export-option"><input type="radio" name="exportImgStyle" value="cards" checked><span>Cards (com foto)</span></label>
@@ -136,6 +141,8 @@
                 <label class="export-option"><input type="radio" name="exportImgItemsPerImage" value="all"><span>Tudo numa imagem só</span></label>
             </fieldset>
 
+=======
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
             <p id="exportImageError" class="form-error" hidden></p>
 
             <div class="modal-actions">
@@ -152,6 +159,7 @@
             <div class="export-image-preview">
                 <img id="exportImagePreviewImg" alt="Pré-visualização do ranking exportado">
             </div>
+<<<<<<< HEAD
             <div id="exportImagePagerNav" class="export-image-pager" hidden>
                 <button id="exportImagePrevPageBtn" type="button" aria-label="Página anterior">‹</button>
                 <span id="exportImagePagerLabel">Página 1 de 1</span>
@@ -161,12 +169,21 @@
                 <button id="exportImageShareBtn" type="button">Compartilhar</button>
                 <button id="exportImageSaveBtn" type="button">Salvar imagem</button>
                 <button id="exportImageSaveAllBtn" type="button" hidden>Salvar todas</button>
+=======
+            <div class="modal-actions export-image-result-actions">
+                <button id="exportImageShareBtn" type="button">Compartilhar</button>
+                <button id="exportImageSaveBtn" type="button">Salvar imagem</button>
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
                 <button id="exportImageCloseBtn" type="button">Fechar</button>
             </div>
         </div>
     </div>
 
+<<<<<<< HEAD
     <!-- == Interface mobile (≤768px) ==-->
+=======
+    <!-- ============ Interface mobile (≤768px) ============ -->
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 
     <!-- Barra de pesquisa sobreposta, aberta pelo botão de lupa da toolbar -->
     <div id="mobileSearchBar" class="mobile-search-bar hidden">
@@ -186,8 +203,13 @@
                 <select id="mobileFilterSelect" aria-label="Filtrar itens">
                     <option value="all">Todos</option>
                     <option value="ranked">Ranqueados</option>
+<<<<<<< HEAD
                     <option value="unranked">Não ranqueados</option>
                     <option value="review">A revisar</option>
+=======
+                    <option value="unranked">Não Ranqueados</option>
+                    <option value="review">A Revisar</option>
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
                 </select>
             </div>
         </div>

@@ -489,6 +489,7 @@ button:disabled:hover {
     order: -1;
 }
 
+<<<<<<< HEAD
 .export-image-pager {
     display: flex;
     align-items: center;
@@ -512,6 +513,8 @@ button:disabled:hover {
     text-align: center;
 }
 
+=======
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 /* Responsividade */
 
 @media (max-width: 700px) {
@@ -633,9 +636,17 @@ button:disabled:hover {
     }
 }
 
+<<<<<<< HEAD
 /* Interface mobile: barra inferior fixa, gavetas "Ordenar" e
    "Mais", busca sobreposta e seleção de card.
    Fica atrás de tudo acima no desktop; só ativa em ≤768px. */
+=======
+/* =========================================================
+   Interface mobile: barra inferior fixa, gavetas "Ordenar" e
+   "Mais", busca sobreposta e seleção de card.
+   Fica atrás de tudo acima no desktop; só ativa em ≤768px.
+   ========================================================= */
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
 
 /* Card selecionado (mobile) */
 
@@ -842,7 +853,11 @@ button:disabled:hover {
 }
 
 @media (max-width: 768px) {
+<<<<<<< HEAD
     /* A antiga barra de topo (busca, Novo, Ferramentas) some por
+=======
+    /* A antiga barra de topo (busca, Novo, ☰ Ferramentas) some por
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
        completo — tudo isso agora vive na toolbar inferior e nas gavetas. */
     .controls {
         display: none;
@@ -866,4 +881,8 @@ button:disabled:hover {
     .mobile-toolbar {
         display: block;
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 282f287b97b7eec8fd033a2e7692348af1c5f29a
