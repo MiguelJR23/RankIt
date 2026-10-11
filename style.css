@@ -56,19 +56,110 @@ body {
     align-items: stretch;
 }
 
-.controls > *,
-.tools-panel > * {
+.controls > * {
     min-width: 0;
 }
 
-/* Gaveta de ferramentas (filtro, colunas, exportar/importar) */
+/* Navegação circular de ações (desktop) — um botão central expande as
+   ações (Novo, exportar/importar, limpar marcações) em arco ao seu
+   redor, inspirado em menus radiais tipo "Persona". Reusa os mesmos
+   ids/handlers dos botões de sempre; só muda a apresentação. */
 
-.tools-toggle {
-    display: none;
+.wheel-nav {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 25;
 }
 
-.tools-panel {
-    display: contents;
+.wheel-toggle {
+    position: relative;
+    z-index: 2;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .4);
+}
+
+.wheel-toggle-icon {
+    width: 22px;
+    height: 22px;
+    transition: transform .25s ease;
+}
+
+.wheel-nav.open .wheel-toggle-icon {
+    transform: rotate(45deg);
+}
+
+.wheel-items {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 52px;
+    height: 52px;
+    pointer-events: none;
+}
+
+.wheel-item {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    opacity: 0;
+    transform: translate(0, 0) scale(.4);
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), opacity .2s, background .2s;
+    pointer-events: none;
+}
+
+.wheel-item .icon {
+    width: 20px;
+    height: 20px;
+}
+
+.wheel-nav.open .wheel-item {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(var(--wx), var(--wy)) scale(1);
+}
+
+.wheel-item:hover,
+.wheel-item:focus-visible {
+    background: var(--accent);
+}
+
+.wheel-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 6px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: .72rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+}
+
+.wheel-item:hover .wheel-label,
+.wheel-item:focus-visible .wheel-label {
+    opacity: 1;
 }
 
 input,
@@ -550,21 +641,6 @@ button:disabled:hover {
         grid-column: 1 / -1;
     }
 
-    .tools-toggle {
-        display: block;
-    }
-
-    .tools-panel {
-        display: none;
-    }
-
-    .tools-panel.open {
-        display: grid;
-        grid-column: 1 / -1;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
     .card img {
         height: 150px;
     }
@@ -592,10 +668,6 @@ button:disabled:hover {
     }
 
     .controls {
-        grid-template-columns: 1fr;
-    }
-
-    .tools-panel.open {
         grid-template-columns: 1fr;
     }
 
@@ -845,6 +917,12 @@ button:disabled:hover {
     /* A antiga barra de topo (busca, Novo, Ferramentas) some por
        completo — tudo isso agora vive na toolbar inferior e nas gavetas. */
     .controls {
+        display: none;
+    }
+
+    /* A roda de navegação circular é exclusiva do desktop; no mobile as
+       mesmas ações já vivem na gaveta "Mais" da toolbar inferior. */
+    .wheel-nav {
         display: none;
     }
 
