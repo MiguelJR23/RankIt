@@ -17,10 +17,6 @@
         </div>
         <div class="controls">
         <input id="search" placeholder="Pesquisar" aria-label="Pesquisar itens">
-        <button id="newBtn" type="button">Novo</button>
-        <button id="toolsToggleBtn" type="button" class="tools-toggle" aria-expanded="false" aria-controls="toolsPanel">☰ Ferramentas</button>
-
-        <div id="toolsPanel" class="tools-panel">
         <select id="filter" aria-label="Filtrar itens">
             <option value="all">Todos</option>
             <option value="ranked">Ranqueados</option>
@@ -34,15 +30,50 @@
             <option value="4">4 colunas</option>
             <option value="custom">Personalizado</option>
         </select>
-        <button id="exportListTxtBtn" type="button">Exportar Lista</button>
-        <button id="importListTxtBtn" type="button">Importar Lista</button>
-        <button id="exportImagesTxtBtn" type="button">Exportar Imagens</button>
-        <button id="importImagesTxtBtn" type="button">Importar Imagens</button>
-        <button id="clearMarkersBtn" type="button">Limpar marcações [+/-] e Novo</button>
-        <button id="exportImageBtn" type="button">Exportar como imagem</button>
-        </div>
         </div>
     </header>
+
+    <!-- Navegação circular de ações (desktop, >768px): um botão central
+         expande as ações (Novo, exportar/importar, limpar marcações) em
+         arco ao redor dele, no lugar do antigo botão "☰ Ferramentas".
+         No mobile essas mesmas ações continuam na gaveta "Mais" da
+         toolbar inferior — nada aqui duplica aquela lógica, os botões
+         abaixo reusam os mesmos ids/handlers de sempre. -->
+    <div id="wheelNav" class="wheel-nav">
+        <button id="wheelToggleBtn" type="button" class="wheel-toggle" aria-expanded="false" aria-controls="wheelItems" aria-label="Abrir menu de ações" title="Ações">
+            <svg class="icon wheel-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div id="wheelItems" class="wheel-items">
+            <button id="newBtn" type="button" class="wheel-item" style="--wx:0px; --wy:112px;" aria-label="Novo item" title="Novo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span class="wheel-label">Novo</span>
+            </button>
+            <button id="exportListTxtBtn" type="button" class="wheel-item" style="--wx:-29px; --wy:108px;" aria-label="Exportar lista" title="Exportar lista">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span class="wheel-label">Exportar lista</span>
+            </button>
+            <button id="importListTxtBtn" type="button" class="wheel-item" style="--wx:-56px; --wy:97px;" aria-label="Importar lista" title="Importar lista">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span class="wheel-label">Importar lista</span>
+            </button>
+            <button id="exportImagesTxtBtn" type="button" class="wheel-item" style="--wx:-79px; --wy:79px;" aria-label="Exportar imagens" title="Exportar imagens">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                <span class="wheel-label">Exportar imagens</span>
+            </button>
+            <button id="importImagesTxtBtn" type="button" class="wheel-item" style="--wx:-97px; --wy:56px;" aria-label="Importar imagens" title="Importar imagens">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                <span class="wheel-label">Importar imagens</span>
+            </button>
+            <button id="clearMarkersBtn" type="button" class="wheel-item" style="--wx:-108px; --wy:29px;" aria-label="Limpar marcações" title="Limpar marcações [+/-] e Novo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8l-6-6a2 2 0 0 1 0-3l10-10a2 2 0 0 1 3 0l6 6a2 2 0 0 1 0 3L11 20"></path><line x1="8" y1="20" x2="14.5" y2="13.5"></line></svg>
+                <span class="wheel-label">Limpar marcações</span>
+            </button>
+            <button id="exportImageBtn" type="button" class="wheel-item" style="--wx:-112px; --wy:0px;" aria-label="Exportar como imagem" title="Exportar como imagem">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+                <span class="wheel-label">Exportar como imagem</span>
+            </button>
+        </div>
+    </div>
 
     <main>
      <section>
