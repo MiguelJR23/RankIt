@@ -33,8 +33,9 @@ const searchInput = document.getElementById('search');
 const filterSelect = document.getElementById('filter');
 const columnsSelect = document.getElementById('columns');
 const newBtn = document.getElementById('newBtn');
-const toolsToggleBtn = document.getElementById('toolsToggleBtn');
-const toolsPanel = document.getElementById('toolsPanel');
+const wheelNav = document.getElementById('wheelNav');
+const wheelToggleBtn = document.getElementById('wheelToggleBtn');
+const wheelItems = document.getElementById('wheelItems');
 const cancelBtn = document.getElementById('cancelBtn');
 const saveBtn = document.getElementById('saveBtn');
 const exportListTxtBtn = document.getElementById('exportListTxtBtn');
@@ -995,10 +996,26 @@ newBtn.addEventListener('click', () => openModal());
 cancelBtn.addEventListener('click', closeModalFn);
 saveBtn.addEventListener('click', saveItem);
 
-toolsToggleBtn.addEventListener('click', () => {
-  const isOpen = toolsPanel.classList.toggle('open');
-  toolsToggleBtn.setAttribute('aria-expanded', String(isOpen));
-  toolsToggleBtn.textContent = isOpen ? '✕ Fechar' : '☰ Ferramentas';
+// Roda de navegação circular (desktop): o botão central só alterna a
+// classe "open", que o CSS usa pra espalhar os itens em arco. Clicar
+// fora, apertar Esc ou escolher uma ação fecha a roda de novo.
+function setWheelOpen(open) {
+  wheelNav.classList.toggle('open', open);
+  wheelToggleBtn.setAttribute('aria-expanded', String(open));
+}
+
+wheelToggleBtn.addEventListener('click', () => {
+  setWheelOpen(!wheelNav.classList.contains('open'));
+});
+
+document.addEventListener('click', (e) => {
+  if (wheelNav.classList.contains('open') && !wheelNav.contains(e.target)) {
+    setWheelOpen(false);
+  }
+});
+
+wheelItems.addEventListener('click', (e) => {
+  if (e.target.closest('.wheel-item')) setWheelOpen(false);
 });
 
 exportListTxtBtn.addEventListener('click', exportListTxt);
@@ -1018,6 +1035,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModalFn();
   if (e.key === 'Escape' && !exportImageModalOverlay.classList.contains('hidden')) closeExportImageModal();
   if (e.key === 'Escape' && !exportImageResultOverlay.classList.contains('hidden')) closeExportImageResultModal();
+  if (e.key === 'Escape' && wheelNav.classList.contains('open')) setWheelOpen(false);
 });
 
 /* Exportar como imagem */
